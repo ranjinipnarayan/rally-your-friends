@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.112.4",
+    "@vercel/og": "npm:@vercel/og@0.8.5",
+    "react": "npm:react@19.2.0"
+  },
+  "compilerOptions": { "lib": ["deno.ns", "dom", "esnext"], "strict": true },
+  "nodeModulesDir": "auto"
+}

@@ -1,0 +1,6 @@
+# Local Wrangler runtime settings; never commit the filled .dev.vars file.
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+SUPABASE_SERVICE_ROLE_KEY=
+GOOGLE_MAPS_API_KEY=
+OG_RENDER_SECRET=

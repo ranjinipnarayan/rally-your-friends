@@ -1,0 +1,6 @@
+project_id = "rally"
+
+[functions.og-image]
+# The handler checks a shared secret before accessing data or rendering.
+verify_jwt = false
+static_files = ["./functions/og-image/assets/*.ttf"]

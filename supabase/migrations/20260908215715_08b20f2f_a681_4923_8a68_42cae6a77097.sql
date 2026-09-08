@@ -1,0 +1,2 @@
+ALTER TABLE public.rallies ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS rallies_user_id_created_at_idx ON public.rallies (user_id, created_at DESC);
