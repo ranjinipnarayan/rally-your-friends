@@ -11,7 +11,7 @@ export function RallyCard({
 }: {
   rally: RallyView;
   editing?: boolean;
-  onEdit?: () => void;
+  onEdit?: (() => void) | undefined;
   children?: ReactNode;
 }) {
   const isPoll = rally.timeMode === "poll";
@@ -22,11 +22,15 @@ export function RallyCard({
     <section className="border border-border p-4" aria-label="Plan details">
       <dl className="space-y-2 text-sm">
         <div>
-          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Plan</dt>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+            Plan
+          </dt>
           <dd className="text-base font-semibold">{rally.activity}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Time</dt>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+            Time
+          </dt>
           <dd>
             {confirmedTime ? (
               <TimeStamp value={confirmedTime} />
@@ -44,19 +48,39 @@ export function RallyCard({
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Location</dt>
-          <dd>{location}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Time zone</dt>
-          <dd>{currentTimeZone()}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Respond by</dt>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+            Location
+          </dt>
           <dd>
-            <TimeStamp value={rally.expiresAt} />
+            {location}
+            {rally.mapsUrl && (
+              <a
+                href={rally.mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 block underline"
+              >
+                Open in Google Maps
+              </a>
+            )}
           </dd>
         </div>
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+            Time zone
+          </dt>
+          <dd>{currentTimeZone()}</dd>
+        </div>
+        {rally.responsesOpen && (
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+              Respond by
+            </dt>
+            <dd>
+              <TimeStamp value={rally.expiresAt} />
+            </dd>
+          </div>
+        )}
       </dl>
 
       {onEdit && (
@@ -69,7 +93,9 @@ export function RallyCard({
         </button>
       )}
 
-      {editing && children && <div className="mt-4 border-t border-border pt-4">{children}</div>}
+      {editing && children && (
+        <div className="mt-4 border-t border-border pt-4">{children}</div>
+      )}
     </section>
   );
 }

@@ -3,7 +3,8 @@ export type OgCardData = {
   activity: string;
   when: string;
   where: string;
-  confirmed: boolean;
+  status: "open" | "confirmed" | "cancelled" | "completed";
+  responsesOpen: boolean;
 };
 
 const BLACK = "#000000";
@@ -17,6 +18,17 @@ function truncate(value: string, max: number) {
 
 /** A satori element tree (plain objects; no JSX needed). */
 export function ogCardTree(data: OgCardData) {
+  const status = data.status;
+  const footer =
+    status === "confirmed"
+      ? "Tap to see the confirmed plan"
+      : status === "cancelled"
+        ? "The organizer cancelled this Rally"
+        : status === "completed"
+          ? "This event has passed"
+          : data.responsesOpen === false
+            ? "Responses are closed"
+            : "Tap to say if this works for you";
   const row = (label: string, value: string) => ({
     type: "div",
     props: {
@@ -82,23 +94,19 @@ export function ogCardTree(data: OgCardData) {
                   children: "RALLY",
                 },
               },
-              ...(data.confirmed
-                ? [
-                    {
-                      type: "div",
-                      props: {
-                        style: {
-                          fontSize: 22,
-                          letterSpacing: 3,
-                          color: WHITE,
-                          backgroundColor: BLACK,
-                          padding: "8px 18px",
-                        },
-                        children: "CONFIRMED",
-                      },
-                    },
-                  ]
-                : []),
+              {
+                type: "div",
+                props: {
+                  style: {
+                    fontSize: 22,
+                    letterSpacing: 3,
+                    color: WHITE,
+                    backgroundColor: BLACK,
+                    padding: "8px 18px",
+                  },
+                  children: status.toUpperCase(),
+                },
+              },
             ],
           },
         },
@@ -133,7 +141,7 @@ export function ogCardTree(data: OgCardData) {
           type: "div",
           props: {
             style: { fontSize: 26, color: GREY },
-            children: "Tap to say if this works for you",
+            children: footer,
           },
         },
       ],

@@ -66,12 +66,11 @@ function CreateRallyPage() {
     setCandidates(generateCandidates(w, t));
   }
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function createPlan(status: "draft" | "open") {
     setError(null);
     const resolved = normalizeActivity(activity);
     const list = timeMode === "poll" ? candidates.filter(Boolean) : [];
-    if (timeMode === "poll" && list.length === 0) {
+    if (status === "open" && timeMode === "poll" && list.length === 0) {
       setError("Generate at least one time option.");
       return;
     }
@@ -80,14 +79,18 @@ function CreateRallyPage() {
       const result = await create({
         data: {
           activity: resolved,
+          status,
           timeMode,
           startsAt:
-            timeMode === "specific" ? new Date(startsAt).toISOString() : null,
-          locationMode,
-          location:
-            locationMode === "specific"
-              ? location.trim() || "To be decided"
+            timeMode === "specific" && startsAt
+              ? new Date(startsAt).toISOString()
               : null,
+          locationMode:
+            locationMode === "specific" && location.trim()
+              ? "specific"
+              : "open",
+          location:
+            locationMode === "specific" ? location.trim() || null : null,
           candidates: list.map((v) => new Date(v).toISOString()),
         },
       });
@@ -106,7 +109,13 @@ function CreateRallyPage() {
     <main className="mx-auto max-w-md px-4 py-6">
       <h1 className="text-xl font-bold">Rally</h1>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-8">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void createPlan("open");
+        }}
+        className="mt-6 space-y-8"
+      >
         <fieldset className="space-y-2">
           <legend className="text-base font-semibold">
             1. What are you planning?
@@ -296,13 +305,23 @@ function CreateRallyPage() {
 
         {error && <p className="text-sm font-medium">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background disabled:opacity-50"
-        >
-          {busy ? "Creating…" : "Create Rally"}
-        </button>
+        <div className="space-y-2">
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background disabled:opacity-50"
+          >
+            {busy ? "Saving…" : "Create Rally"}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void createPlan("draft")}
+            className="w-full border border-border px-4 py-3 text-sm disabled:opacity-50"
+          >
+            Save draft
+          </button>
+        </div>
       </form>
     </main>
   );

@@ -1,5 +1,5 @@
 import { siteUrl } from "@/lib/site-url";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
@@ -14,6 +14,7 @@ import {
 
 import {
   CONSENSUS_LABEL,
+  STATUS_LABEL,
   type Consensus,
   formatFullDateTime,
   rallyPreview,
@@ -35,17 +36,7 @@ export const Route = createFileRoute("/r/$inviteToken")({
     const rally = loaderData?.rally ?? null;
     const { title, description } = rallyPreview(rally);
     const version = rally
-      ? [
-          rally.status,
-          rally.finalTime,
-          rally.finalLocation,
-          rally.startsAt,
-          rally.location,
-        ]
-          .map((v) => v ?? "")
-          .join("|")
-          .replace(/[^a-zA-Z0-9]/g, "")
-          .slice(-16)
+      ? rally.updatedAt.replace(/[^a-zA-Z0-9]/g, "").slice(-16)
       : "none";
     const image = rally
       ? siteUrl(`/api/public/og/${params.inviteToken}?v=${version}`)
@@ -108,6 +99,7 @@ function storageKey(token: string) {
 }
 
 function RecipientPage() {
+  const router = useRouter();
   const { inviteToken } = Route.useParams();
   const { rally } = Route.useLoaderData();
   const loadMine = useServerFn(getMyResponse);
@@ -127,8 +119,27 @@ function RecipientPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") void router.invalidate();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    const interval = window.setInterval(refresh, 60_000);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [router]);
+
+  useEffect(() => {
     let cancelled = false;
-    const stored = localStorage.getItem(storageKey(inviteToken));
+    let stored: string | null;
+    try {
+      stored = localStorage.getItem(storageKey(inviteToken));
+    } catch {
+      return;
+    }
     if (!stored || !rally) return;
     (async () => {
       const parsed = JSON.parse(stored) as { name: string; responseId: string };
@@ -171,7 +182,7 @@ function RecipientPage() {
 
   const isPoll = rally.timeMode === "poll";
   const openLocation = rally.locationMode === "open";
-  const closed = rally.status === "expired" || rally.status === "confirmed";
+  const closed = !rally.responsesOpen;
   // Offer new times when the attendee says the current option(s) don't work.
   const wantsNewTimes = isPoll
     ? noneWork
@@ -220,10 +231,14 @@ function RecipientPage() {
         },
       });
       setResponseId(result.responseId);
-      localStorage.setItem(
-        storageKey(inviteToken),
-        JSON.stringify({ name: name.trim(), responseId: result.responseId }),
-      );
+      try {
+        localStorage.setItem(
+          storageKey(inviteToken),
+          JSON.stringify({ name: name.trim(), responseId: result.responseId }),
+        );
+      } catch {
+        // The reply is already saved on the backend; browser storage is optional.
+      }
       setSaved(true);
       setEditing(false);
     } catch (err) {
@@ -237,27 +252,31 @@ function RecipientPage() {
 
   return (
     <Shell>
-      <h1 className="mb-4 text-xl font-bold">{rally.activity}</h1>
+      <h1 className="text-xl font-bold">{rally.activity}</h1>
+      <p className="mb-4 mt-1 text-sm text-muted-foreground">
+        {STATUS_LABEL[rally.status]}
+      </p>
       <RallyCard rally={rally} />
 
       {rally.status === "confirmed" && (rally.finalTime ?? rally.startsAt) && (
         <button
           type="button"
-          onClick={() =>
-            downloadIcs(
-              rally,
-              typeof window !== "undefined" ? window.location.href : undefined,
-            )
-          }
+          onClick={() => downloadIcs(rally, rally.publicUrl)}
           className="mt-4 w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background"
         >
           Add to calendar
         </button>
       )}
 
-      {rally.status === "expired" && (
+      {closed && (
         <p className="mt-4 border border-border p-3 text-sm">
-          This Rally has expired.
+          {rally.status === "confirmed"
+            ? "The plan is confirmed. See the final time and place above."
+            : rally.status === "cancelled"
+              ? "The organizer cancelled this Rally."
+              : rally.status === "completed"
+                ? "This Rally has ended."
+                : "The response window has closed. The organizer can still finalize the plan."}
         </p>
       )}
 
@@ -401,10 +420,10 @@ function RecipientPage() {
                   <textarea
                     value={suggestion}
                     onChange={(e) =>
-                      setSuggestion(e.target.value.slice(0, 300))
+                      setSuggestion(e.target.value.slice(0, 200))
                     }
                     rows={3}
-                    maxLength={300}
+                    maxLength={200}
                     aria-label="Any location needs? (optional)"
                     placeholder="e.g. need to be in Soho by 4, ideally the UWS, want to try a new wine bar called Demo"
                     className="w-full border border-border px-3 py-2 text-base"
@@ -420,7 +439,7 @@ function RecipientPage() {
                           (prev.trim()
                             ? `${prev.trim()}, ${hint}`
                             : hint
-                          ).slice(0, 300),
+                          ).slice(0, 200),
                         )
                       }
                       className="rounded-full border border-border px-3 py-1 text-xs"

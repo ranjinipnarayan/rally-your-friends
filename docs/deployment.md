@@ -7,8 +7,9 @@ before enabling the integrations.
 
 ## 1. Fresh Supabase database
 
-Create a new project in a **Free organization** in your own Supabase account. Do
-not reuse the old backend: this setup intentionally starts with no rallies/users.
+For a new installation, create a project in a **Free organization** in your own
+Supabase account. The running Rally deployment already has a database and users;
+upgrade it in place with migrations rather than recreating or resetting it.
 Record the project reference, project URL, publishable key, and server secret or
 legacy service-role key. Never send privileged keys through chat or commit them.
 
@@ -21,20 +22,34 @@ npx supabase db push --dry-run
 npx supabase db push
 ```
 
-Check the dry-run targets the new project and includes all four migrations: the
-three application migrations followed by the Places budget migration. The local
+For a fresh project, the dry-run includes five migrations: the three application
+migrations, the Places budget, and `20260908232741_rally_lifecycle.sql`. For an
+existing project, it should list only unapplied migrations. Apply the lifecycle
+migration once **before** deploying this version of Pages and the image renderer.
+It preserves existing data, replaces the older status values, and adds publication,
+confirmation, archiving, and recommended-action fields plus transactional RPCs.
+The local
 `project_id = "rally"` is a development label, not a hosted project reference.
 
 The six application tables remain protected by RLS. `private.places_request_budget`
-is not exposed through the API. Only `service_role` can execute
-`public.reserve_places_request()`. Do not add browser policies or grants to bypass
-the server's token/authentication checks.
+is not exposed through the API. Table access and the lifecycle/quota RPCs are
+server-only: their grants allow `service_role`, with no public RLS policies that
+let clients bypass the website's verified-session and ownership checks. Native
+clients use the website's `/api/v1` organizer API, not direct table or RPC access.
+The backend refreshes lifecycle/action state during relevant reads and writes;
+no scheduled keep-alive job is required.
 
 To regenerate public schema types after future migrations:
 
 ```sh
 npx supabase gen types typescript --linked --schema public > src/integrations/supabase/types.ts
 ```
+
+The current generator omits SQL input nullability. Preserve the three documented
+`string | null` annotations in `Functions`: `create_rally.Args.p_user_id`,
+`manage_rally.Args.p_user_id`, and `manage_rally.Args.p_creator_token`. They model
+anonymous web creation and the mutually exclusive account/capability checks.
+Run type checking after regeneration.
 
 Keep production and preview pointing to the **same** Supabase project if they
 share a Google API key. A separate counter in another project would not share the
@@ -60,7 +75,9 @@ Put the identical `OG_RENDER_SECRET` in Cloudflare Pages runtime secrets. The
 public `/api/public/og/:inviteToken` route proxies to this function and never exposes
 the secret. It caches successful PNGs with Cloudflare's Cache API and HTTP cache
 headers for five minutes. Invalid/missing rallies and rendering failures redirect
-to the static Rally image with `Cache-Control: no-store`.
+to the static Rally image with `Cache-Control: no-store`. Unpublished drafts,
+including cancelled drafts, do not receive public personalized images. Public
+images follow the shared lifecycle and keep the original question while Open.
 
 Rotate the secret in Supabase and Pages together. A mismatch temporarily uses the
 static fallback. Keep the Supabase Edge Function on its Free plan; check invocation,
@@ -122,6 +139,11 @@ to `https://rally-your-friends.com`. Allow redirects for
 `http://localhost:8788/**`. Add only preview URLs you actually use; avoid wildcards
 covering every Pages project. Existing code redirects users back to the same
 page where they requested sign-in.
+
+The native Apple identifiers and callback URL are not set yet. Leave the existing
+web redirects intact; add the native callback only after its real value is chosen.
+The API contract and work required in the separate iOS projects are documented in
+[native-integration.md](native-integration.md).
 
 Resend Free currently allows 3,000 emails/month and 100/day. Keep that account on
 Free. This deployment caps Supabase Auth email sends at four per hour, with
@@ -195,21 +217,20 @@ and [Workers limits](https://developers.cloudflare.com/workers/platform/limits/)
 
 The production Pages project is `rally-your-friends`, with the fallback address
 `https://rally-your-friends.pages.dev`. Both `rally-your-friends.com` and
-`www.rally-your-friends.com` are attached as custom domains. The build uses the
-apex domain for public links.
+`www.rally-your-friends.com` are active custom domains, verified through the
+Cloudflare API on 2026-09-08. The build uses the apex domain for public links.
 
-Cloudflare's zone is on the Free plan. Activate it at the domain registrar by
-setting the nameservers to `ada.ns.cloudflare.com` and `miguel.ns.cloudflare.com`
-after checking the copied DNS records against Northwest's full DNS list.
-The prepared apex/www CNAMEs point to `rally-your-friends.pages.dev`.
+Cloudflare's zone is active on the Free plan, using `ada.ns.cloudflare.com` and
+`miguel.ns.cloudflare.com`. The apex/www CNAMEs point to
+`rally-your-friends.pages.dev`.
 Existing MX, SPF, and DMARC records were preserved. Resend's
 `resend._domainkey` TXT and DNS-only `send` CNAME were copied from the active DNS.
-Retain any additional mailbox
-DKIM records shown by Northwest before switching nameservers. Do not replace the
-mailbox's MX record with Resend's sending-subdomain MX record.
+Preserve Northwest's mailbox records when making future DNS changes. Do not
+replace the mailbox's MX record with Resend's sending-subdomain MX record.
 
-`help@rally-your-friends.com` remains hosted by Northwest. Verify the domain in a
-Resend Free account to use that address for Supabase sign-in emails. Downloaded
+`help@rally-your-friends.com` remains hosted by Northwest. The sending domain is
+verified in Resend, and Supabase is configured to use that address. The user
+confirmed receipt and successful sign-in from an authorized test email. Downloaded
 calendar files list it as the contact; Rally does not send calendar invitations
 by email or collect attendee email addresses.
 
@@ -224,8 +245,10 @@ by email or collect attendee email addresses.
   documented Auth migration/export process before any future account migration.
 - Treat exports as private: they contain creator tokens and user-associated data.
   Never commit them or reset the usage counter during an active billing period.
-- Roll back an application release through Pages deployment history if necessary.
-  Do not rewrite published Git history or reset the database to roll back frontend code.
+- Roll back through Pages deployment history only to an application compatible
+  with the current schema. Releases using the old lifecycle status values are
+  not a safe rollback target after this migration. Do not rewrite published Git
+  history or reset the database to roll back frontend code.
 - No automatic service upgrades are configured. Free-tier exhaustion may mean
   waiting, resuming a paused project, or disabling an optional integration.
 

@@ -12,7 +12,11 @@ function toIcsUtc(d: Date) {
 }
 
 function escapeText(value: string) {
-  return value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
 }
 
 export function buildIcs(rally: RallyView, url?: string): string | null {
@@ -30,7 +34,7 @@ export function buildIcs(rally: RallyView, url?: string): string | null {
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
-    `UID:rally-${startDate.getTime()}@rally`,
+    `UID:rally-${rally.id}@rally`,
     `DTSTAMP:${toIcsUtc(new Date())}`,
     `DTSTART:${toIcsUtc(startDate)}`,
     `DTEND:${toIcsUtc(endDate)}`,

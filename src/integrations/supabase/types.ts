@@ -56,6 +56,8 @@ export type Database = {
       rallies: {
         Row: {
           activity: string;
+          archived_at: string | null;
+          confirmed_at: string | null;
           created_at: string;
           creator_token: string;
           expires_at: string;
@@ -65,6 +67,8 @@ export type Database = {
           invite_token: string;
           location: string | null;
           location_mode: string;
+          next_action: string;
+          published_at: string | null;
           starts_at: string | null;
           status: string;
           time_mode: string;
@@ -73,6 +77,8 @@ export type Database = {
         };
         Insert: {
           activity?: string;
+          archived_at?: string | null;
+          confirmed_at?: string | null;
           created_at?: string;
           creator_token: string;
           expires_at?: string;
@@ -82,6 +88,8 @@ export type Database = {
           invite_token: string;
           location?: string | null;
           location_mode: string;
+          next_action?: string;
+          published_at?: string | null;
           starts_at?: string | null;
           status?: string;
           time_mode: string;
@@ -90,6 +98,8 @@ export type Database = {
         };
         Update: {
           activity?: string;
+          archived_at?: string | null;
+          confirmed_at?: string | null;
           created_at?: string;
           creator_token?: string;
           expires_at?: string;
@@ -99,6 +109,8 @@ export type Database = {
           invite_token?: string;
           location?: string | null;
           location_mode?: string;
+          next_action?: string;
+          published_at?: string | null;
           starts_at?: string | null;
           status?: string;
           time_mode?: string;
@@ -179,7 +191,6 @@ export type Database = {
         Row: {
           consensus: string | null;
           created_at: string;
-          email: string | null;
           id: string;
           name: string;
           note: string | null;
@@ -189,7 +200,6 @@ export type Database = {
         Insert: {
           consensus?: string | null;
           created_at?: string;
-          email?: string | null;
           id?: string;
           name: string;
           note?: string | null;
@@ -199,7 +209,6 @@ export type Database = {
         Update: {
           consensus?: string | null;
           created_at?: string;
-          email?: string | null;
           id?: string;
           name?: string;
           note?: string | null;
@@ -260,9 +269,86 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      reserve_places_request: {
-        Args: Record<PropertyKey, never>;
-        Returns: boolean;
+      create_rally: {
+        Args: {
+          p_creator_token: string;
+          p_invite_token: string;
+          p_payload: Json;
+          // This non-STRICT SQL function accepts NULL for anonymous creation.
+          p_user_id: string | null;
+        };
+        Returns: {
+          activity: string;
+          archived_at: string | null;
+          confirmed_at: string | null;
+          created_at: string;
+          creator_token: string;
+          expires_at: string;
+          final_location: string | null;
+          final_time: string | null;
+          id: string;
+          invite_token: string;
+          location: string | null;
+          location_mode: string;
+          next_action: string;
+          published_at: string | null;
+          starts_at: string | null;
+          status: string;
+          time_mode: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "rallies";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      manage_rally: {
+        Args: {
+          // Either the authenticated owner or the anonymous capability is used.
+          p_creator_token: string | null;
+          p_patch: Json;
+          p_rally_id: string;
+          p_user_id: string | null;
+        };
+        Returns: {
+          activity: string;
+          archived_at: string | null;
+          confirmed_at: string | null;
+          created_at: string;
+          creator_token: string;
+          expires_at: string;
+          final_location: string | null;
+          final_time: string | null;
+          id: string;
+          invite_token: string;
+          location: string | null;
+          location_mode: string;
+          next_action: string;
+          published_at: string | null;
+          starts_at: string | null;
+          status: string;
+          time_mode: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "rallies";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      refresh_rallies: {
+        Args: { p_rally_id?: string; p_user_id?: string };
+        Returns: undefined;
+      };
+      reserve_places_request: { Args: never; Returns: boolean };
+      respond_to_rally: {
+        Args: { p_invite_token: string; p_payload: Json };
+        Returns: string;
       };
     };
     Enums: {

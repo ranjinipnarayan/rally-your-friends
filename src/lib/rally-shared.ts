@@ -1,18 +1,34 @@
 export type TimeMode = "specific" | "poll";
 export type LocationMode = "specific" | "open";
 export type RallyStatus =
-  "draft" | "open" | "collecting" | "choosing_location" | "confirmed" | "expired";
-export type Consensus = "yes" | "no" | "another_day" | "none_work" | "some_work";
+  "draft" | "open" | "confirmed" | "cancelled" | "completed";
+export type NextAction =
+  | "waiting_for_responses"
+  | "choose_time"
+  | "choose_location"
+  | "finalize"
+  | "none";
+export type Consensus =
+  "yes" | "no" | "another_day" | "none_work" | "some_work";
 
 export type Candidate = { id: string; startsAt: string };
 
 export type RallyView = {
+  id: string;
   activity: string;
   timeMode: TimeMode;
   startsAt: string | null;
   locationMode: LocationMode;
   location: string | null;
   status: RallyStatus;
+  nextAction: NextAction;
+  archivedAt: string | null;
+  publishedAt: string | null;
+  updatedAt: string;
+  responsesOpen: boolean;
+  publicUrl: string;
+  mapsUrl: string | null;
+  finalMessage: string | null;
   finalTime: string | null;
   finalLocation: string | null;
   expiresAt: string;
@@ -29,14 +45,28 @@ export type ResponseView = {
   timeSuggestions: string[];
 };
 
-export const ACTIVITY_SUGGESTIONS = ["Dinner", "Coffee", "Drinks", "Movie", "Walk"];
+export const ACTIVITY_SUGGESTIONS = [
+  "Dinner",
+  "Coffee",
+  "Drinks",
+  "Movie",
+  "Walk",
+];
 export const DATE_WINDOWS = ["This week", "This weekend", "Next week"] as const;
 export const TIME_OF_DAY = ["Morning", "Afternoon", "Evening"] as const;
 
 export type DateWindow = (typeof DATE_WINDOWS)[number];
 export type TimeOfDay = (typeof TIME_OF_DAY)[number];
 
-const VAGUE = ["", "i don't know", "i dont know", "idk", "not sure", "dunno", "no idea"];
+const VAGUE = [
+  "",
+  "i don't know",
+  "i dont know",
+  "idk",
+  "not sure",
+  "dunno",
+  "no idea",
+];
 
 export function normalizeActivity(input: string): string {
   const trimmed = input.trim();
@@ -76,10 +106,18 @@ export function generateCandidates(
     dates.push(addDays(1), addDays(2), addDays(3));
   } else if (window === "This weekend") {
     const daysToFri = (5 - day + 7) % 7 || 7;
-    dates.push(addDays(daysToFri), addDays(daysToFri + 1), addDays(daysToFri + 2));
+    dates.push(
+      addDays(daysToFri),
+      addDays(daysToFri + 1),
+      addDays(daysToFri + 2),
+    );
   } else {
     const daysToNextMon = (8 - day) % 7 || 7;
-    dates.push(addDays(daysToNextMon), addDays(daysToNextMon + 2), addDays(daysToNextMon + 4));
+    dates.push(
+      addDays(daysToNextMon),
+      addDays(daysToNextMon + 2),
+      addDays(daysToNextMon + 4),
+    );
   }
 
   return dates.map((d) => toLocalInputValue(atHour(d, hour)));
@@ -121,7 +159,9 @@ export function formatFullDateTime(value: string | null | undefined): string {
 }
 
 /** ISO-8601 timestamp including the UTC offset, for <time datetime="…">. */
-export function isoWithOffset(value: string | null | undefined): string | undefined {
+export function isoWithOffset(
+  value: string | null | undefined,
+): string | undefined {
   if (!value) return undefined;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return undefined;
@@ -144,10 +184,17 @@ export function currentTimeZone(): string {
 export const STATUS_LABEL: Record<RallyStatus, string> = {
   draft: "Draft",
   open: "Open",
-  collecting: "Collecting responses",
-  choosing_location: "Choosing location",
   confirmed: "Confirmed",
-  expired: "Expired",
+  cancelled: "Cancelled",
+  completed: "Completed",
+};
+
+export const NEXT_ACTION_LABEL: Record<NextAction, string> = {
+  waiting_for_responses: "Waiting for responses",
+  choose_time: "Choose time",
+  choose_location: "Choose location",
+  finalize: "Finalize",
+  none: "None",
 };
 
 export const CONSENSUS_LABEL: Record<Consensus, string> = {
@@ -178,7 +225,7 @@ export function rallyPreview(rally: RallyView | null | undefined): {
   const where = rally.finalLocation ?? rally.location ?? "Place TBD";
   return {
     title: `${rally.activity} · ${when}`,
-    description: `${where} — tap to say if this works for you.`,
+    description: `${where} — ${rally.status === "confirmed" ? "the plan is confirmed." : rally.status === "cancelled" ? "this plan was cancelled." : rally.status === "completed" ? "this event has passed." : "tap to say if this works for you."}`,
   };
 }
 
@@ -194,7 +241,8 @@ export function leadingCandidate(
   counts.sort(
     (a, b) =>
       b.count - a.count ||
-      new Date(a.candidate.startsAt).getTime() - new Date(b.candidate.startsAt).getTime(),
+      new Date(a.candidate.startsAt).getTime() -
+        new Date(b.candidate.startsAt).getTime(),
   );
   const top = counts[0];
   return top && top.count > 0 ? top : null;

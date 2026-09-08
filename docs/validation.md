@@ -1,6 +1,8 @@
 # Release validation
 
-## Automated local checks
+## Repeatable local checks
+
+Use Node 22.14+ and the committed npm lockfile:
 
 ```sh
 npm ci
@@ -15,83 +17,128 @@ npm run preview
 npm run test:runtime
 ```
 
-Tests apply all migrations to an embedded Postgres instance, check RLS/permissions,
-exercise 200 queued concurrent quota attempts, test UTC-day separation, prove
-autocomplete fails closed without retries, test renderer authentication/caching/
-fallbacks, and check email error messages. The Deno test renders actual cold/warm
-PNGs with bundled fonts and checks their dimensions and changing content.
+The tests cover server session verification, the organizer JSON API, transactional
+creation/management/replies, account/capability authorization, publication privacy,
+five lifecycle states, separate next actions, and account sections. Database tests
+apply all five migrations to embedded Postgres and verify service-only grants.
+They also cover the shared Google quota, failed reservations, upstream failures,
+and no retries. Image tests cover authentication, lifecycle mapping, unpublished
+draft privacy, caching, and fallback. Deno renders real 1200×630 PNGs with the
+bundled fonts for Open, Confirmed, Cancelled, and Completed.
 
-Embedded Postgres serializes queries in one process; also exercise the quota
-against concurrent connections to the hosted database before public launch. The
-SQL's atomic upsert provides the cross-process synchronization.
+Embedded Postgres serializes work through one connection. It cannot establish
+behavior under independent hosted connections; verify those separately. HTTP
+smoke checks exercise routes, static images, fallback, server-function transport,
+CSRF, and input validation. They do not replace interactive browser checks or
+hosted CPU measurements.
 
-## Hosted acceptance checks
+## Recorded evidence — 2026-09-08
 
-These require the new Supabase project, configured authentication, and deployed
-Pages/Edge Function. Do not mark them complete based only on mocked tests.
+The lifecycle migration is applied as `20260908232741_rally_lifecycle`; all five
+local migration versions match Supabase's remote history. The Pages release is
+[`8c43be91`](https://8c43be91.rally-your-friends.pages.dev), and the updated
+Supabase `og-image` function is active. The Cloudflare API reports the apex and
+`www` domains Active and the DNS zone on Free. Native Apple identifiers and the
+callback URL remain unset.
 
-- Create a fixed-time rally, follow its invite in a separate browser, submit and
-  edit a reply, then confirm the plan using the creator link.
-- Create a poll with multiple times, select availability, suggest another time
-  and location, and verify the creator sees the correct responses.
-- Confirm invalid links show the existing invalid-link page. Set a test rally's
-  expiry in the past and verify it stops accepting responses.
-- Exercise Google autocomplete, then disable its key and verify plain-text entry
-  still works. In a dedicated test environment, exhaust the quota and confirm no
-  further Google calls occur. Never reset production counts to run this test.
-- Request a real magic link, return to the original page, save a rally, refresh,
-  and verify it appears in My Rallies. Log out and back in. With a second account,
-  verify the first account's saved rallies are not listed and cannot be claimed.
-- Load a personalized image through `/api/public/og/:token`. Verify a 1200×630 PNG,
-  a five-minute cache lifetime, and the confirmed image after changing the plan.
-  Check repeat requests reduce renderer invocations. Missing secrets, invalid
-  tokens, and unavailable renderers must use `/og.png` without caching failures.
-- Verify home/invite metadata uses the deployed Pages address. Confirm client
-  assets contain no server keys and network requests use only the configured services.
-- Check cold/warm SSR and server-function CPU usage in Cloudflare and renderer
-  CPU/memory in Supabase. Check all three accounts remain on Free plans and the
-  Google key is dedicated to this app with the shared reservation limit active.
-- Record hosted test results and actual usage measurements before public launch.
+Local validation passed: type checking, lint, all **115 Vitest tests** (including
+31 image tests), the production build, Deno type checking, and one Deno test
+rendering real PNGs across all four public lifecycle statuses. Clean npm
+installation and lockfile validation passed earlier during this setup. HTTP
+runtime/CSRF smoke checks also passed. No dependencies were installed for native
+targets.
 
-No hosted account access or production resource measurements are implied by a
-successful local build.
+The lifecycle acceptance matrix passed against both **local Pages with the
+hosted Supabase database** and the **production Pages deployment**, using
+temporary accounts and Rallies:
 
-## Local implementation verification — 2026-09-08
+- All four combinations of specific/poll timing and specific/open location.
+- Immediate account ownership for native API and signed-in web creation, plus
+  anonymous website creation and private creator-link management.
+- Two-account isolation, including denied access through another organizer's
+  Rally ID or creator link.
+- Private drafts and cancelled unpublished drafts; successful publication before
+  a reserved public URL becomes usable.
+- Anonymous replies, edits, availability, and time/location suggestions;
+  recommended actions progress through time, location, and finalization.
+- Explicit confirmation locks a final plan, produces share text, and closes
+  replies; cancellation, archive/unarchive, post-expiry finalization, and
+  Completed/Past behavior work through the backend.
+- Real concurrent hosted requests: eight replies, a reply/confirmation race,
+  and a single winner when two accounts claim an anonymous Rally.
+- Public SSR includes confirmed details and the Maps link while omitting private
+  organizer/response data. Open public questions keep their original time/place.
 
-- Clean npm install and final lockfile validation passed on Node 22.23.2.
-- Type checking and production Pages build passed using the production domain and connected Supabase public config.
-- 38 Vitest tests passed; Deno type checking and the actual PNG render test passed.
-- HTTP smoke checks passed against Wrangler's local Pages runtime: page routes,
-  static image, fallback redirect, server-function transport, CSRF, and validation.
-- Lint has no errors or warnings; unused-variable checks are enabled.
-- npm reported zero known vulnerabilities after updating Nitro and Wrangler.
-- Source/config scans found no removed-platform references. A build with dummy
-  server-secret canaries confirmed they were absent from both client and worker output.
-- The confirmed PNG was visually inspected locally. No browser connection was
-  available for interactive UI testing.
-- Cloudflare Pages is deployed at `https://rally-your-friends.pages.dev`. Live HTTP
-  route/static-image/CSRF/input-validation checks pass. Both custom domains are
-  attached, pending nameserver activation.
-- All four migrations are applied to Supabase project `ynfuafalrvgcszyxpguy`; local
-  migration versions match the remote history. Security advisors report only the
-  expected informational RLS-without-policies findings (server-only access).
-- Live fixed-time and poll rally creation, reply editing, availability, time/location
-  suggestions, confirmation, expiry, and authenticated saved-rally/account isolation
-  checks passed. Temporary test accounts and rallies were deleted afterward.
-- Auth redirects and Resend SMTP are configured for `help@rally-your-friends.com`,
-  with four sign-in emails per hour. Supabase accepted one user-authorized test
-  email; the user confirmed inbox receipt and successful sign-in.
-- Supabase `og-image` is active. Direct cold/warm PNG checks and both local and hosted Pages
-  proxy/cache/update checks passed. Cloudflare requires `redirect: "manual"`;
-  both upstream integrations reject redirects without forwarding their secrets.
-- Hosted homepage samples all succeeded. CPU was usually 4–8 ms, with one 11 ms
-  sample and a cold 55 ms sample. These exceed the nominal Free 10 ms limit on
-  some requests; no paid upgrade was enabled. Free-tier runtime compatibility
-  under all cold-start conditions is not established.
-- Google Places autocomplete is enabled with an encrypted server-only key in
-  production and preview. A live Central Park query returned five suggestions;
-  the shared database counter increased from 0 to 1. The key was absent from
-  every build artifact. The 150-request daily limit and failure behavior remain
-  covered by the tests. Google-side key restrictions were not independently verified.
-- Cloudflare's Free DNS zone is prepared, including existing mailbox records and
-  Resend's DKIM and sending CNAME. Registrar nameserver activation remains pending.
+Temporary accounts and Rallies were deleted after both runs. These checks
+exercise the shared database, production website API, web server functions, and
+public SSR; they do not exercise native code or interactive browser controls.
+The `www` host also returned the expected 401 for an unauthenticated `/api/v1/me`.
+
+The deployed image function passed authenticated cold/warm 1200×630 PNG checks,
+and production Pages passed proxy, five-minute cache, and updated confirmed-image
+checks. The resulting PNG was visually inspected. Image-test data was cleaned
+up. Scanning generated assets for the actual configured private key values found
+none.
+
+Cloudflare's production tail recorded 96 requests, all with execution outcome
+`ok`. CPU samples for this release were:
+
+| Request group | Count | Median CPU | Maximum CPU | Samples above 10 ms |
+| --- | ---: | ---: | ---: | ---: |
+| Web server functions | 65 | 2 ms | 15 ms | 3 |
+| Native organizer API | 25 | 4 ms | 19 ms | 2 |
+| Rendered pages | 2 | 33 ms | 37 ms | 2 |
+| Image proxy | 4 | 4 ms | 9 ms | 0 |
+
+Some successful requests exceeded the nominal Free 10 ms CPU budget. This small
+sample does not prove compatibility under every cold-start condition, and an
+earlier deployment had a 55 ms cold homepage sample. No paid upgrade was enabled;
+continue measuring errors and CPU as usage changes.
+
+Supabase security advisors report the expected informational RLS-without-policies
+findings for server-only tables, plus a warning that leaked-password protection
+is disabled. Rally's implemented login uses email magic links. No paid feature
+was enabled to clear that password warning.
+
+Earlier live integration evidence remains relevant:
+
+- Resend SMTP sends as `help@rally-your-friends.com`, with the configured four
+  sign-in emails/hour limit. The user confirmed receipt and successful sign-in
+  from the one authorized test email. No further email was sent for this release.
+- Google Places autocomplete returned five suggestions for a live query and
+  consumed one shared database reservation. The encrypted key was absent from
+  build artifacts. Google-side key restrictions were not independently verified.
+- Both upstream integrations use
+  `redirect: "manual"` because the deployed Cloudflare runtime rejects
+  `redirect: "error"`; redirects do not forward the internal credentials.
+
+## Remaining verification and release checks
+
+Run these against the actual production host after any functional deployment:
+
+- Repeat the lifecycle/account-isolation acceptance checks above using temporary
+  test data and clean it up afterward. Confirm native API and web flows see the
+  same organizer records and final state.
+- Check personalized PNGs directly and through Pages: cold/warm rendering,
+  five-minute caching, changed-state images, and static fallback on invalid
+  tokens or renderer failure. Unpublished drafts must remain private.
+- Inspect the generated browser assets for private keys and confirm requests use
+  only the configured services. Metadata and returned share URLs must use the
+  canonical site URL.
+- Measure hosted cold/warm SSR, API/server-function CPU, and renderer resources.
+  Keep the providers on Free; temporary service limits must not trigger upgrades.
+  Never reset production's Google quota counter to simulate exhaustion.
+- Exercise the preserved creation, recipient, and organizer screens in a browser:
+  edit and submit forms, confirm a plan, refresh Needs You/Active/Past, switch
+  accounts, and inspect final Maps/calendar/share actions.
+
+Interactive UI verification has not been completed in this environment: no
+connected browser was available, and permission for isolated Chrome testing was
+declined. Automated HTTP and database results do not prove rendered interactions.
+
+Native login callbacks, App Group/shared Keychain sessions, the logged-out
+extension prompt, native screens, and inserting messages require implementation
+and device verification in the separate native repositories. The actual Apple
+identifiers and callback are needed before completing that integration. See
+[native-integration.md](native-integration.md) for the contract and native
+acceptance checks; this website release does not claim those behaviors exist.

@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { handleImage, type ImageRally } from "./handler.ts";
+import { handleImage, loadImageRally } from "./handler.ts";
 import { renderCard } from "./render.ts";
 
 Deno.serve((request: Request) =>
@@ -13,15 +13,7 @@ Deno.serve((request: Request) =>
           auth: { persistSession: false, autoRefreshToken: false },
         },
       );
-      const { data, error } = await db
-        .from("rallies")
-        .select(
-          "activity,time_mode,starts_at,location,status,final_time,final_location,rally_candidates(id)",
-        )
-        .eq("invite_token", token)
-        .maybeSingle();
-      if (error) throw error;
-      return data as ImageRally | null;
+      return await loadImageRally(token, db);
     },
     render: renderCard,
   }),

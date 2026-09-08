@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MyRalliesRouteImport } from './routes/my-rallies'
 import { Route as MCreatorTokenRouteImport } from './routes/m.$creatorToken'
 import { Route as RInviteTokenRouteImport } from './routes/r.$inviteToken'
+import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
 import { Route as ApiPublicOgInviteTokenRouteImport } from './routes/api/public/og.$inviteToken'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const RInviteTokenRoute = RInviteTokenRouteImport.update({
   path: '/r/$inviteToken',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
+  id: '/api/v1/$',
+  path: '/api/v1/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicOgInviteTokenRoute = ApiPublicOgInviteTokenRouteImport.update({
   id: '/api/public/og/$inviteToken',
   path: '/api/public/og/$inviteToken',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/my-rallies': typeof MyRalliesRoute
   '/m/$creatorToken': typeof MCreatorTokenRoute
   '/r/$inviteToken': typeof RInviteTokenRoute
+  '/api/v1/$': typeof ApiV1SplatRoute
   '/api/public/og/$inviteToken': typeof ApiPublicOgInviteTokenRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/my-rallies': typeof MyRalliesRoute
   '/m/$creatorToken': typeof MCreatorTokenRoute
   '/r/$inviteToken': typeof RInviteTokenRoute
+  '/api/v1/$': typeof ApiV1SplatRoute
   '/api/public/og/$inviteToken': typeof ApiPublicOgInviteTokenRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/my-rallies': typeof MyRalliesRoute
   '/m/$creatorToken': typeof MCreatorTokenRoute
   '/r/$inviteToken': typeof RInviteTokenRoute
+  '/api/v1/$': typeof ApiV1SplatRoute
   '/api/public/og/$inviteToken': typeof ApiPublicOgInviteTokenRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/my-rallies'
     | '/m/$creatorToken'
     | '/r/$inviteToken'
+    | '/api/v1/$'
     | '/api/public/og/$inviteToken'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/my-rallies'
     | '/m/$creatorToken'
     | '/r/$inviteToken'
+    | '/api/v1/$'
     | '/api/public/og/$inviteToken'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/my-rallies'
     | '/m/$creatorToken'
     | '/r/$inviteToken'
+    | '/api/v1/$'
     | '/api/public/og/$inviteToken'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   MyRalliesRoute: typeof MyRalliesRoute
   MCreatorTokenRoute: typeof MCreatorTokenRoute
   RInviteTokenRoute: typeof RInviteTokenRoute
+  ApiV1SplatRoute: typeof ApiV1SplatRoute
   ApiPublicOgInviteTokenRoute: typeof ApiPublicOgInviteTokenRoute
 }
 
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RInviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/$': {
+      id: '/api/v1/$'
+      path: '/api/v1/$'
+      fullPath: '/api/v1/$'
+      preLoaderRoute: typeof ApiV1SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/og/$inviteToken': {
       id: '/api/public/og/$inviteToken'
       path: '/api/public/og/$inviteToken'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   MyRalliesRoute: MyRalliesRoute,
   MCreatorTokenRoute: MCreatorTokenRoute,
   RInviteTokenRoute: RInviteTokenRoute,
+  ApiV1SplatRoute: ApiV1SplatRoute,
   ApiPublicOgInviteTokenRoute: ApiPublicOgInviteTokenRoute,
 }
 export const routeTree = rootRouteImport

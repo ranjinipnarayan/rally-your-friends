@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { OgCardData } from "./og-card.ts";
 
 export type ImageRally = {
@@ -6,10 +7,41 @@ export type ImageRally = {
   starts_at: string | null;
   location: string | null;
   status: string;
+  published_at: string | null;
   final_time: string | null;
   final_location: string | null;
+  expires_at: string;
   rally_candidates: { id: string }[];
 };
+
+/** Refresh only this public Rally so image-only visits use the same lifecycle. */
+export async function loadImageRally(
+  token: string,
+  db: Pick<SupabaseClient, "from" | "rpc">,
+): Promise<ImageRally | null> {
+  const { data: found, error: lookupError } = await db
+    .from("rallies")
+    .select("id,status,published_at")
+    .eq("invite_token", token)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (!found || !found.published_at || found.status === "draft") return null;
+  const { error: refreshError } = await db.rpc("refresh_rallies", {
+    p_rally_id: found.id,
+  });
+  if (refreshError) throw refreshError;
+  const { data, error } = await db
+    .from("rallies")
+    .select(
+      "activity,time_mode,starts_at,location,status,published_at,final_time,final_location,expires_at,rally_candidates(id)",
+    )
+    .eq("id", found.id)
+    .neq("status", "draft")
+    .not("published_at", "is", null)
+    .maybeSingle();
+  if (error) throw error;
+  return data as ImageRally | null;
+}
 
 function fmt(value: string | null) {
   if (!value) return null;
@@ -62,10 +94,24 @@ export async function handleImage(
   if (!/^[a-z0-9]{16,64}$/.test(token)) return fail(400);
   try {
     const row = await deps.load(token);
-    if (!row) return fail(404);
+    if (!row || !row.published_at || row.status === "draft") return fail(404);
+    if (
+      row.status !== "open" &&
+      row.status !== "confirmed" &&
+      row.status !== "cancelled" &&
+      row.status !== "completed"
+    )
+      return fail(404);
     const count = row.rally_candidates?.length ?? 0;
-    const time = fmt(row.final_time) ?? fmt(row.starts_at);
-    const where = row.final_location ?? row.location;
+    // While voting is open, the preview must match the question recipients see.
+    const time =
+      row.status === "open"
+        ? fmt(row.starts_at)
+        : (fmt(row.final_time) ?? fmt(row.starts_at));
+    const where =
+      row.status === "open"
+        ? row.location
+        : (row.final_location ?? row.location);
     if (!where && !time && !(row.time_mode === "poll" && count > 0))
       return fail(404);
     return await deps.render({
@@ -76,7 +122,10 @@ export async function handleImage(
           ? `${count} times to pick from`
           : "Time TBD"),
       where: where || "Place TBD",
-      confirmed: row.status === "confirmed",
+      status: row.status,
+      responsesOpen:
+        row.status === "open" &&
+        new Date(row.expires_at).getTime() > Date.now(),
     });
   } catch {
     console.error("Share image generation failed");
