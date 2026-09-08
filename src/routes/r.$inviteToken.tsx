@@ -99,6 +99,11 @@ function storageKey(token: string) {
 }
 
 function RecipientPage() {
+  const { inviteToken } = Route.useParams();
+  return <RecipientResponse key={inviteToken} />;
+}
+
+function RecipientResponse() {
   const router = useRouter();
   const { inviteToken } = Route.useParams();
   const { rally } = Route.useLoaderData();
@@ -304,7 +309,7 @@ function RecipientPage() {
               </li>
               {openLocation && <li>Location needs: {suggestion || "—"}</li>}
               {note.trim() && <li>Note: {note.trim()}</li>}
-              {proposedIso.length > 0 && (
+              {wantsNewTimes && proposedIso.length > 0 && (
                 <li>
                   Times you suggested:{" "}
                   {proposedIso.map((t) => formatFullDateTime(t)).join(", ")}
