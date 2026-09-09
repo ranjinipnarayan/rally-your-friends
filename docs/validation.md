@@ -150,7 +150,25 @@ temporary user removed; no email was sent. This checks Supabase's redirect and
 the API session, not iOS URL handling, shared Keychain access, or Messages.
 
 Native callback handling, App Group/shared Keychain sessions, the logged-out
-extension prompt, native screens, and inserting messages require implementation
-and device verification in the separate native repositories. See
+extension prompt, native screens, and inserting messages are implemented in the
+[native repository](https://github.com/ranjinipnarayan/rally) reviewed at `a14f9e9`.
+They still need signed-device verification. Its existing Swift integration
+checks passed locally using mocked HTTP responses. See
 [native-integration.md](native-integration.md) for the contract and native
-acceptance checks; this website release does not claim those behaviors exist.
+acceptance checks; website tests do not establish those device behaviors.
+
+## Native client against production — 2026-09-09
+
+Compiled the native repository's actual `RallyAPI` and `RallyAccountAPI` clients
+at `a14f9e9` into a temporary macOS test runner and used a temporary authenticated
+account against `https://rally-your-friends.com/api/v1`. All four timing/location
+combinations passed creation, immediate organizer-list visibility, detail
+decoding, public-page rendering, saving final choices, explicit confirmation,
+Maps/final-message fields, cancellation, and archiving. Private draft creation,
+Needs You placement, updating/publishing the same draft ID, and Active/Past
+grouping also passed.
+
+The test session was revoked, all five test rallies and the temporary account
+were removed, and cleanup was verified. No email was sent. This proves the native
+HTTP clients interoperate with the deployed backend; it does not exercise native
+UI, PKCE on-device, Keychain entitlements, or the Messages insertion API.

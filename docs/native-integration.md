@@ -3,11 +3,19 @@
 Rally uses **email magic links only**, sent through Resend SMTP by Supabase Auth.
 There is no Sign in with Apple or other OAuth-provider flow. This repository
 owns the website and shared backend; the iOS organizer app and iMessage extension
-belong in separate native projects. Preserve their existing structured interfaces.
+live in [ranjinipnarayan/rally](https://github.com/ranjinipnarayan/rally).
+Preserve their existing structured interfaces.
 
 Use [api.md](api.md) for the HTTP contract, payloads, lifecycle, response shapes,
 and extension creation/sharing flow. Use [validation.md](validation.md) for the
 website/backend test evidence. Native behavior is not established by those tests.
+
+The native source reviewed at `a14f9e9` contains PKCE email login, organizer
+management, shared Keychain storage, and structured Messages creation. Its Swift
+integration checks pass with mocked HTTP responses. The containing app owns
+session refresh; the extension rereads its access-token snapshot on activation.
+Open email links on the device that requested them so PKCE can complete. Signed
+device testing is still required for callbacks, session sharing, and insertion.
 
 ## Development native configuration
 
@@ -146,5 +154,5 @@ Before releasing either native target, verify these on devices:
   into Messages; no contacts permission requested.
 
 URL scheme registration, signed entitlements, shared storage, native screens,
-and message insertion still require native implementation and verification.
-Website API tests cannot substitute for these device checks.
+and message insertion are owned by the native project and still require device
+verification. Website API tests cannot substitute for these device checks.
