@@ -9,12 +9,25 @@ Use [api.md](api.md) for the HTTP contract, payloads, lifecycle, response shapes
 and extension creation/sharing flow. Use [validation.md](validation.md) for the
 website/backend test evidence. Native behavior is not established by those tests.
 
-## Values still needed
+## Development native configuration
 
-The Apple Team ID, containing-app and extension bundle IDs, App Group, shared
-Keychain access group, and native callback URL are **not set yet**. These values
-configure app routing and secure session sharing, not an Apple login provider.
-No placeholder association file or invented native redirect is installed.
+These are the development identifiers supplied by the native project. Confirm
+the production app's identifiers and callback separately before its release.
+
+| Setting | Value |
+| --- | --- |
+| Containing app bundle ID | `com.example.RallyMessages` |
+| Extension bundle ID | `com.example.RallyMessages.MessagesExtension` |
+| Apple Team ID | `NWUMX9X84W` |
+| App Group | `group.com.example.RallyMessages` |
+| Shared Keychain entitlement | `$(AppIdentifierPrefix)com.example.RallyMessages.shared` |
+| Sign-in callback | `com.example.RallyMessages://auth/callback` |
+
+The exact callback is allowlisted in Supabase → Authentication → URL Configuration
+→ Redirect URLs alongside the existing web redirects. Register
+`com.example.RallyMessages` in the containing app's URL Types in Xcode. This
+custom-scheme callback does not require a website association file.
+The native project owns the app registration and signed entitlements.
 
 The native targets need the same Supabase project URL and **publishable** key as
 the website. Never include a service-role key, Supabase personal access token,
@@ -23,12 +36,12 @@ Supabase Auth supplies the user session.
 
 ## Containing-app email login
 
-Start the containing app with email login. Once its real callback is registered
-in Xcode and added to Supabase's redirect allowlist, use the Swift SDK:
+Start the containing app with email login. After registering the URL scheme in
+Xcode, use the Swift SDK:
 
 ```swift
 // supabase is the configured SupabaseClient.
-// callbackURL is the actual allowlisted containing-app callback.
+let callbackURL = URL(string: "com.example.RallyMessages://auth/callback")!
 try await supabase.auth.signInWithOTP(
     email: email,
     redirectTo: callbackURL,
@@ -51,20 +64,24 @@ Pin a compatible Supabase Swift SDK version in the native project and verify its
 callback behavior on a real device. Keep the website's existing magic-link email
 template and browser redirects working when adding the native callback.
 
-For an HTTPS universal-link callback, provide the real Apple application IDs so
-this repository can serve the matching `apple-app-site-association` file and web
-fallback. For a custom URL scheme, register that exact scheme in the containing
-app and allowlist the intended callback in Supabase. Avoid broad redirect
-wildcards. [Supabase's deep-linking guide](https://supabase.com/docs/guides/auth/native-mobile-deep-linking)
-describes the redirect setup.
+Before passing an incoming URL to the SDK, require the scheme
+`com.example.RallyMessages` (case-insensitive), host `auth`, and path `/callback`.
+Preserve the SDK's callback query/fragment parameters, including error responses,
+without logging them. Verify cold-launch and already-running app handling. See
+[Supabase's deep-linking guide](https://supabase.com/docs/guides/auth/native-mobile-deep-linking).
 
 ## Shared app and extension session
 
 Enable the same App Group and shared Keychain access group for both native
 targets. Keep access/refresh tokens in shared Keychain storage, with matching
 service, access group, and storage-key configuration. Use the App Group for
-non-secret configuration and coordination. Tokens must never enter shared
-UserDefaults, URLs, Messages text, or logs.
+non-secret configuration and coordination. Never copy session tokens into shared
+UserDefaults, application-generated URLs, Messages text, or logs.
+
+Use the App Group and Keychain entitlement from the table in both targets.
+Xcode expands `$(AppIdentifierPrefix)` during signing; use the resulting signed
+access-group value in runtime Keychain configuration, not the literal build
+variable. Verify both provisioning profiles authorize the shared groups.
 
 Follow [Apple's Keychain sharing setup](https://developer.apple.com/documentation/security/sharing-access-to-keychain-items-among-a-collection-of-apps).
 Check the selected SDK version's
@@ -128,6 +145,6 @@ Before releasing either native target, verify these on devices:
 - Private drafts staying unshared; no creator links or session secrets inserted
   into Messages; no contacts permission requested.
 
-Apple identifiers/callback setup, shared storage, native screens, and message
-insertion still require native implementation and verification. Website API
-tests cannot substitute for these device checks.
+URL scheme registration, signed entitlements, shared storage, native screens,
+and message insertion still require native implementation and verification.
+Website API tests cannot substitute for these device checks.

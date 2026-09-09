@@ -38,8 +38,8 @@ The lifecycle migration is applied as `20260908232741_rally_lifecycle`; all five
 local migration versions match Supabase's remote history. The Pages release is
 [`8c43be91`](https://8c43be91.rally-your-friends.pages.dev), and the updated
 Supabase `og-image` function is active. The Cloudflare API reports the apex and
-`www` domains Active and the DNS zone on Free. Native Apple identifiers and the
-callback URL remain unset.
+`www` domains Active and the DNS zone on Free. Native identifiers have since been
+supplied; see the native callback verification below.
 
 Local validation passed: type checking, lint, all **115 Vitest tests** (including
 31 image tests), the production build, Deno type checking, and one Deno test
@@ -136,9 +136,21 @@ Interactive UI verification has not been completed in this environment: no
 connected browser was available, and permission for isolated Chrome testing was
 declined. Automated HTTP and database results do not prove rendered interactions.
 
-Native login callbacks, App Group/shared Keychain sessions, the logged-out
+The exact native callback `com.example.RallyMessages://auth/callback` was added
+to Supabase's redirect allowlist and verified by rereading the hosted Auth
+configuration. Existing web redirects, Site URL, Resend SMTP settings, email
+templates, and send limits were preserved. Email login remains enabled and
+Apple login disabled. Native identifiers are recorded in
+[native-integration.md](native-integration.md).
+
+A generated, unsent magic link for a temporary account redirected to the exact
+native callback with a valid session. That session authenticated the same user
+through the production `/api/v1/me` endpoint. The session was revoked and the
+temporary user removed; no email was sent. This checks Supabase's redirect and
+the API session, not iOS URL handling, shared Keychain access, or Messages.
+
+Native callback handling, App Group/shared Keychain sessions, the logged-out
 extension prompt, native screens, and inserting messages require implementation
-and device verification in the separate native repositories. The actual Apple
-identifiers and callback are needed before completing that integration. See
+and device verification in the separate native repositories. See
 [native-integration.md](native-integration.md) for the contract and native
 acceptance checks; this website release does not claim those behaviors exist.

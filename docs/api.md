@@ -5,8 +5,10 @@
 Authentication is **email magic links only**: Supabase Auth creates/identifies the
 user and sends the link through Resend SMTP as `help@rally-your-friends.com`.
 There is no Sign in with Apple or other OAuth-provider flow. Email delivery and
-web sign-in are configured. Native callback routing and shared session storage
-still need implementation in the separate iOS projects; see
+web sign-in are configured. The native callback
+`com.example.RallyMessages://auth/callback` is allowlisted in Supabase.
+App callback handling and shared session storage still need implementation in
+the separate iOS projects; see
 [native-integration.md](native-integration.md).
 
 This is the shared backend for the website, organizer app, and thin structured
@@ -374,10 +376,11 @@ recipient **web page**, not a JSON endpoint. Recipients respond and edit replies
 there. The organizer API has no anonymous reply endpoint. Do not call Supabase
 tables/RPCs directly or integrate against private generated web RPC IDs.
 
-Email magic-link infrastructure is ready. Apple Team ID, bundle IDs, the native
-callback, and App Group/Keychain entitlements are not set yet; these are needed
-for app routing/session sharing, **not Sign in with Apple**. Keep authentication
-email-only. The separate native code must implement callback handling, secure
+Email magic-link infrastructure is ready, including the exact native callback
+`com.example.RallyMessages://auth/callback`. App identifiers and shared-group
+values are recorded in the native integration guide. Keep authentication
+email-only. The separate native code must implement URL scheme registration,
+signed entitlements, callback handling, secure
 shared sessions, and message insertion. See [native-integration.md](native-integration.md)
 for that checklist and [validation.md](validation.md) for current website/backend
 test evidence and remaining device/browser verification.

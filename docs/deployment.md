@@ -140,8 +140,8 @@ to `https://rally-your-friends.com`. Allow redirects for
 covering every Pages project. Existing code redirects users back to the same
 page where they requested sign-in.
 
-The native Apple identifiers and callback URL are not set yet. Leave the existing
-web redirects intact; add the native callback only after its real value is chosen.
+Also allow the exact native callback `com.example.RallyMessages://auth/callback`.
+It is configured in the hosted project; preserve the existing web redirects.
 The API contract and work required in the separate iOS projects are documented in
 [native-integration.md](native-integration.md).
 
