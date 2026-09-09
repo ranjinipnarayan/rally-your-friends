@@ -225,7 +225,7 @@ export function rallyPreview(rally: RallyView | null | undefined): {
   const where = rally.finalLocation ?? rally.location ?? "Place TBD";
   return {
     title: `${rally.activity} · ${when}`,
-    description: `${where} — ${rally.status === "confirmed" ? "the plan is confirmed." : rally.status === "cancelled" ? "this plan was cancelled." : rally.status === "completed" ? "this event has passed." : "tap to say if this works for you."}`,
+    description: `${where} — ${rally.status === "confirmed" ? "the plan is confirmed." : rally.status === "cancelled" ? "this plan was cancelled." : rally.status === "completed" ? "this event has passed." : "Tap to vote!"}`,
   };
 }
 

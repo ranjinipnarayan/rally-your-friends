@@ -372,7 +372,7 @@ describe("share-image lifecycle copy", () => {
     responsesOpen: true,
   };
   it.each([
-    ["open", "OPEN", "Tap to say if this works for you"],
+    ["open", "OPEN", "Tap to vote!"],
     ["confirmed", "CONFIRMED", "Tap to see the confirmed plan"],
     ["cancelled", "CANCELLED", "The organizer cancelled this Rally"],
     ["completed", "COMPLETED", "This event has passed"],
@@ -382,13 +382,13 @@ describe("share-image lifecycle copy", () => {
     expect(tree).toContain(footer);
     if (status === "cancelled" || status === "completed") {
       expect(tree).not.toContain("confirmed plan");
-      expect(tree).not.toContain("Tap to say");
+      expect(tree).not.toContain("Tap to vote!");
     }
   });
   it("does not invite responses after the response deadline", () => {
     const tree = JSON.stringify(ogCardTree({ ...card, responsesOpen: false }));
     expect(tree).toContain("OPEN");
     expect(tree).toContain("Responses are closed");
-    expect(tree).not.toContain("Tap to say");
+    expect(tree).not.toContain("Tap to vote!");
   });
 });

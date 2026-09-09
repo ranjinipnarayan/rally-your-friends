@@ -28,7 +28,7 @@ export function ogCardTree(data: OgCardData) {
           ? "This event has passed"
           : data.responsesOpen === false
             ? "Responses are closed"
-            : "Tap to say if this works for you";
+            : "Tap to vote!";
   const row = (label: string, value: string) => ({
     type: "div",
     props: {
