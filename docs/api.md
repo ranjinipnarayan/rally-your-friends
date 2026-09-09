@@ -72,6 +72,7 @@ or without fractional seconds, and display them in the user's time zone.
 | POST | `/rallies` | `201`, saved ID, title, tokens, public URL |
 | GET | `/rallies/:id` | `200`, organizer detail and responses |
 | PATCH | `/rallies/:id` | `200`, updated organizer detail and responses |
+| DELETE | `/rallies/:id` | `204`, permanently deleted; empty response body |
 
 ### GET /me
 
@@ -163,10 +164,33 @@ Use the returned URL rather than building it locally. A draft returns this same
 shape but its URL remains private until Publish. Cancelling or archiving an
 unpublished draft does not publish it; inspect `rally.publishedAt` in detail.
 
+To save an incomplete draft, use the same authenticated `POST /rallies` endpoint
+with `status: "draft"`. For example:
+
+```json
+{
+  "activity": "",
+  "timeMode": "poll",
+  "startsAt": null,
+  "candidates": [],
+  "locationMode": "open",
+  "location": null,
+  "status": "draft"
+}
+```
+
+Draft saving requires email sign-in on both the website and API. It returns
+`201` with the usual creation result and appears in Needs You. Update that ID
+with `PATCH` action `save`, then `publish` when complete. There is no separate
+draft endpoint and no anonymous draft creation. Website sign-in preserves the
+pending form locally when browser storage is available; it is saved to the
+backend only when the signed-in organizer chooses Save draft.
+
 ### GET /rallies
 
 Returns every owned Rally across web, app, and extension, newest first. There is
 no pagination or filtering parameter in v1.
+Deleted Rallies are absent from all sections, including Past.
 
 ```json
 {
@@ -305,6 +329,23 @@ choices may also be supplied in the same Confirm request. Blank locations become
 null and cannot be confirmed. Confirmed/Cancelled/Completed plans cannot edit
 their final choices. Send Cancel/Archive/Unarchive as action-only requests.
 Do not send `status`, `nextAction`, ownership IDs, or publication timestamps.
+
+### DELETE /rallies/:id
+
+Requires the owner's Bearer session. Send no body. On success, return `204 No
+Content`; do not attempt to decode JSON. Remove the Rally from native UI state
+and refresh the organizer list. Confirm the irreversible deletion with the user
+before sending this request.
+
+Deletion removes the Rally, candidates, replies, votes, and suggestions in one
+transaction. Only the two link identifiers and deletion time are retained so
+attendee and private management URLs show **“This Rally was deleted”**. Deleted
+links accept no responses. Cached share images can remain for up to five minutes.
+This is separate from Cancel (shows a cancelled plan) and Archive (files in Past).
+
+Missing, already-deleted, and other-account IDs return `404`; no account details
+are disclosed. An unauthenticated request returns `401`. After an ambiguous
+network failure, refresh the list/detail to determine whether deletion completed.
 
 ## Lifecycle and recommended action
 

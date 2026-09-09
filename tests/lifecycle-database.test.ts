@@ -160,14 +160,22 @@ describe("canonical lifecycle and ownership", () => {
       { activity: "expired", status: "open", next_action: "finalize" },
       { activity: "manually closed", status: "open", next_action: "finalize" },
     ]);
-    const publication = await db.query<{ activity: string; published: boolean; keeps_created_at: boolean }>(
+    const publication = await db.query<{
+      activity: string;
+      published: boolean;
+      keeps_created_at: boolean;
+    }>(
       `SELECT activity, published_at IS NOT NULL AS published,
         published_at = created_at AS keeps_created_at FROM public.rallies ORDER BY activity`,
     );
-    expect(publication.rows.find((rally) => rally.activity === "draft")?.published).toBe(false);
-    expect(publication.rows.filter((rally) => rally.activity !== "draft").every(
-      (rally) => rally.published && rally.keeps_created_at,
-    )).toBe(true);
+    expect(
+      publication.rows.find((rally) => rally.activity === "draft")?.published,
+    ).toBe(false);
+    expect(
+      publication.rows
+        .filter((rally) => rally.activity !== "draft")
+        .every((rally) => rally.published && rally.keeps_created_at),
+    ).toBe(true);
   });
 
   it("preserves both elapsed deadlines and early manual response closure during migration", async () => {
@@ -176,12 +184,23 @@ describe("canonical lifecycle and ownership", () => {
     );
     const expired = rows[0]!;
     const manuallyClosed = rows[1]!;
-    expect(new Date(expired.expires_at).toISOString()).toBe("2000-01-01T00:00:00.000Z");
-    expect(new Date(manuallyClosed.expires_at).getTime()).toBeLessThanOrEqual(Date.now());
+    expect(new Date(expired.expires_at).toISOString()).toBe(
+      "2000-01-01T00:00:00.000Z",
+    );
+    expect(new Date(manuallyClosed.expires_at).getTime()).toBeLessThanOrEqual(
+      Date.now(),
+    );
     await expect(respond(expired)).rejects.toThrow(/expired/);
     await expect(respond(manuallyClosed)).rejects.toThrow(/expired/);
     expect(
-      (await manage(manuallyClosed, { action: "confirm" }, null, manuallyClosed.creator_token)).status,
+      (
+        await manage(
+          manuallyClosed,
+          { action: "confirm" },
+          null,
+          manuallyClosed.creator_token,
+        )
+      ).status,
     ).toBe("confirmed");
   });
 
@@ -210,7 +229,11 @@ describe("canonical lifecycle and ownership", () => {
       startsAt: null,
       location: null,
     });
-    expect(rally).toMatchObject({ status: "draft", next_action: "none", published_at: null });
+    expect(rally).toMatchObject({
+      status: "draft",
+      next_action: "none",
+      published_at: null,
+    });
     await expect(respond(rally)).rejects.toThrow(/not accepting responses/);
     await expect(manage(rally, { action: "confirm" })).rejects.toThrow(
       /Publish this draft/,
@@ -239,15 +262,26 @@ describe("canonical lifecycle and ownership", () => {
   });
 
   it("keeps a cancelled or archived unpublished draft private", async () => {
-    let rally = await create({ status: "draft", activity: "", startsAt: null, location: null });
+    let rally = await create({
+      status: "draft",
+      activity: "",
+      startsAt: null,
+      location: null,
+    });
     rally = await manage(rally, { action: "archive" });
     expect(rally.published_at).toBeNull();
     rally = await manage(rally, { action: "unarchive" });
     expect(rally.published_at).toBeNull();
     rally = await manage(rally, { action: "cancel" });
-    expect(rally).toMatchObject({ status: "cancelled", published_at: null, next_action: "none" });
+    expect(rally).toMatchObject({
+      status: "cancelled",
+      published_at: null,
+      next_action: "none",
+    });
     await expect(respond(rally)).rejects.toThrow(/not accepting responses/);
-    await expect(manage(rally, { action: "publish" })).rejects.toThrow(/already closed/);
+    await expect(manage(rally, { action: "publish" })).rejects.toThrow(
+      /already closed/,
+    );
     expect((await reload(rally)).published_at).toBeNull();
   });
 
@@ -389,7 +423,10 @@ describe("canonical lifecycle and ownership", () => {
 
 describe("decisions and anonymous responses", () => {
   it("flags unanswered polls once all time options have passed without inventing a final event date", async () => {
-    const rally = await create({ timeMode: "poll", candidates: [future, later] });
+    const rally = await create({
+      timeMode: "poll",
+      candidates: [future, later],
+    });
     await db.query(
       "UPDATE public.rally_candidates SET starts_at = '2000-01-01' WHERE rally_id = $1",
       [rally.id],
@@ -401,7 +438,10 @@ describe("decisions and anonymous responses", () => {
       confirmed_at: null,
       final_time: null,
     });
-    const other = await create({ timeMode: "poll", candidates: [future, later] });
+    const other = await create({
+      timeMode: "poll",
+      candidates: [future, later],
+    });
     await db.query(
       "UPDATE public.rally_candidates SET starts_at = '2000-01-01' WHERE id = $1",
       [(await candidates(other))[0]!.id],
@@ -730,5 +770,88 @@ describe("service-only database boundary", () => {
         (row) => !row.prosecdef && row.proconfig.includes('search_path=""'),
       ),
     ).toBe(true);
+  });
+});
+
+describe("Rally deletion", () => {
+  it("deletes rally data atomically while preserving only link tombstones", async () => {
+    const rally = await create({
+      timeMode: "poll",
+      startsAt: null,
+      candidates: [future, later],
+      locationMode: "open",
+      location: null,
+    });
+    const options = await candidates(rally);
+    await respond(rally, {
+      consensus: "some_work",
+      available: [options[0]!.id],
+      locationSuggestion: "Park",
+      timeSuggestions: [later],
+    });
+    const deleted = await db.query<{ deleted: boolean }>(
+      "SELECT public.delete_rally($1,$2,$3) AS deleted",
+      [rally.id, organizer, null],
+    );
+    expect(deleted.rows[0]?.deleted).toBe(true);
+    expect(await reload(rally)).toBeUndefined();
+    for (const table of [
+      "responses",
+      "rally_candidates",
+      "location_suggestions",
+      "time_suggestions",
+    ]) {
+      expect(
+        (
+          await db.query(`SELECT * FROM public.${table} WHERE rally_id = $1`, [
+            rally.id,
+          ])
+        ).rows,
+      ).toEqual([]);
+    }
+    expect(
+      (
+        await db.query(
+          "SELECT invite_token, creator_token FROM public.deleted_rallies WHERE invite_token = $1",
+          [rally.invite_token],
+        )
+      ).rows,
+    ).toEqual([
+      { invite_token: rally.invite_token, creator_token: rally.creator_token },
+    ]);
+    await expect(respond(rally)).rejects.toThrow();
+  });
+  it("requires the owner to delete saved rallies, even with the creator token", async () => {
+    const rally = await create();
+    for (const user of [otherOrganizer, null]) {
+      const result = await db.query<{ deleted: boolean }>(
+        "SELECT public.delete_rally($1,$2,$3) AS deleted",
+        [rally.id, user, rally.creator_token],
+      );
+      expect(result.rows[0]?.deleted).toBe(false);
+      expect(await reload(rally)).toBeDefined();
+    }
+  });
+  it("allows anonymous deletion only with the matching private link", async () => {
+    const rally = await create({}, null);
+    const wrong = await db.query<{ deleted: boolean }>(
+      "SELECT public.delete_rally($1,$2,$3) AS deleted",
+      [rally.id, null, token()],
+    );
+    expect(wrong.rows[0]?.deleted).toBe(false);
+    const right = await db.query<{ deleted: boolean }>(
+      "SELECT public.delete_rally($1,$2,$3) AS deleted",
+      [rally.id, null, rally.creator_token],
+    );
+    expect(right.rows[0]?.deleted).toBe(true);
+  });
+  it("keeps deletion records and the deletion RPC inaccessible to public roles", async () => {
+    for (const role of ["anon", "authenticated"]) {
+      const result = await db.query<{ readable: boolean; callable: boolean }>(
+        "SELECT has_table_privilege($1, 'public.deleted_rallies', 'SELECT') AS readable, has_function_privilege($1, 'public.delete_rally(uuid,uuid,text)', 'EXECUTE') AS callable",
+        [role],
+      );
+      expect(result.rows[0]).toEqual({ readable: false, callable: false });
+    }
   });
 });

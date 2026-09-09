@@ -172,3 +172,27 @@ The test session was revoked, all five test rallies and the temporary account
 were removed, and cleanup was verified. No email was sent. This proves the native
 HTTP clients interoperate with the deployed backend; it does not exercise native
 UI, PKCE on-device, Keychain entitlements, or the Messages insertion API.
+
+## Deletion, drafts, and management links — 2026-09-09
+
+Applied `20260909193502_rally_deletion` and deployed Pages release
+[`80ee4052`](https://80ee4052.rally-your-friends.pages.dev). Type checking, lint,
+all 123 tests, and the production build passed. The deletion tests cover owner
+and anonymous-capability authorization, cascading removal, minimal deleted-link
+records, and public-role denial. Anonymous draft creation is rejected before
+database access. Generated build artifacts contain none of the configured
+privileged environment values.
+
+Live temporary-account checks passed authenticated draft creation, anonymous
+draft rejection through both API and website server functions, cross-account and
+unauthenticated deletion rejection, owner API/web deletion, disappearance from
+My Rallies, deleted attendee-page HTML, deleted management-view data, rejection
+of late replies, and removal of related database rows. Temporary users, sessions,
+rallies, and deleted-link test records were cleaned up without sending email.
+
+Both apex and `www` serve the association JSON with HTTP 200 and no redirect.
+App-first management links additionally require the native Associated Domains
+entitlements and URL handler described in the native integration guide; this
+website deployment alone does not activate those native capabilities. The new
+draft-login UI, delete confirmation, and app-installed/app-absent link behavior
+still need interactive device/browser checks.

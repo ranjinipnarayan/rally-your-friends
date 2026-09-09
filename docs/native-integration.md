@@ -138,6 +138,34 @@ activity, the website uses `Let's hang out`.
 
 ## Native acceptance checks
 
+### Management links and deletion
+
+The website serves `/.well-known/apple-app-site-association` on the apex and
+`www` hosts for `NWUMX9X84W.com.example.RallyMessages`, matching only `/m/*`.
+Public `/r/*` recipient links continue to open on the website. iOS Universal
+Links select the installed app and otherwise open the website; same-domain
+Safari navigation may stay in Safari according to the user's browsing intent.
+[Apple's Universal Links documentation](https://developer.apple.com/documentation/Xcode/allowing-apps-and-websites-to-link-to-your-content)
+describes this behavior.
+
+The native team must add `applinks:rally-your-friends.com` and
+`applinks:www.rally-your-friends.com` to the containing app's Associated Domains
+entitlement and implement `NSUserActivityTypeBrowsingWeb` routing for `/m/:token`.
+These changes are not present in the previously reviewed native commit `a14f9e9`.
+Validate the HTTPS host/path and token, require sign-in, decode `creatorToken`
+from the authenticated `GET /rallies` list, and open the matching Rally by ID.
+The token never bypasses account ownership. If the link is not in that account,
+offer its website URL with `?web=1`, which is excluded from app routing and shows
+the web management or deleted-link page. Do not log or insert management tokens
+into Messages. Test app-installed, app-absent, logged-out, deleted, and
+wrong-account links on a signed device.
+
+Add a confirmed Delete action using `DELETE /rallies/:id`; accept an empty `204`
+response and remove the row from all lists. Draft saving already uses authenticated
+`POST /rallies` with `status: "draft"`; no new draft endpoint is required.
+
+### Device checks
+
 Before releasing either native target, verify these on devices:
 
 - New and existing email accounts; successful, expired, and already-used

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { TimeStamp } from "@/components/TimeStamp";
 import { RallyCard } from "@/components/RallyCard";
+import { DeletedRally } from "@/components/DeletedRally";
 import { downloadIcs } from "@/lib/ics";
 import {
   getInviteView,
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/r/$inviteToken")({
     try {
       return await getInviteView({ data: { inviteToken: params.inviteToken } });
     } catch {
-      return { rally: null, responseCount: 0 };
+      return { rally: null, responseCount: 0, deleted: false };
     }
   },
   staleTime: 30_000,
@@ -106,7 +107,8 @@ function RecipientPage() {
 function RecipientResponse() {
   const router = useRouter();
   const { inviteToken } = Route.useParams();
-  const { rally } = Route.useLoaderData();
+  const view = Route.useLoaderData();
+  const { rally } = view;
   const loadMine = useServerFn(getMyResponse);
   const send = useServerFn(submitResponse);
 
@@ -175,6 +177,12 @@ function RecipientResponse() {
   }, [inviteToken]);
 
   if (!rally) {
+    if ("deleted" in view && view.deleted)
+      return (
+        <Shell>
+          <DeletedRally />
+        </Shell>
+      );
     return (
       <Shell>
         <h1 className="text-lg font-bold">This link isn’t valid</h1>
@@ -453,10 +461,6 @@ function RecipientResponse() {
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Neighborhoods, travel limits, must-try spots — anything that
-                  shapes where we go.
-                </p>
               </div>
             )}
 
@@ -493,10 +497,6 @@ function RecipientResponse() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Free text — dietary needs, timing or location constraints,
-                anything else.
-              </p>
             </div>
 
             <section
@@ -549,10 +549,6 @@ function RecipientResponse() {
                   <dd className="inline">{note.trim() || "None"}</dd>
                 </div>
               </dl>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Nothing is sent until you choose “
-                {saved ? "Submit updated response" : "Submit response"}”.
-              </p>
             </section>
 
             {error && (

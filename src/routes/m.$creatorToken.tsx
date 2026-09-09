@@ -1,14 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { PlaceInput } from "@/components/PlaceInput";
 import { EmailSignIn } from "@/components/EmailSignIn";
+import { DeletedRally } from "@/components/DeletedRally";
 import { RallyCard } from "@/components/RallyCard";
 import { SaveRallySection } from "@/components/SaveRallySection";
 import { useSession } from "@/hooks/useSession";
 import { downloadIcs } from "@/lib/ics";
-import { getCreatorView, updateRally } from "@/lib/rally.functions";
+import {
+  deleteRally,
+  getCreatorView,
+  updateRally,
+} from "@/lib/rally.functions";
 import {
   CONSENSUS_LABEL,
   NEXT_ACTION_LABEL,
@@ -46,13 +51,16 @@ export const Route = createFileRoute("/m/$creatorToken")({
 });
 
 function CreatorPage() {
+  const navigate = useNavigate();
   const { creatorToken } = Route.useParams();
   const { signedIn, email, loading: sessionLoading } = useSession();
 
   const load = useServerFn(getCreatorView);
   const update = useServerFn(updateRally);
+  const remove = useServerFn(deleteRally);
 
   const [loading, setLoading] = useState(true);
+  const [deleted, setDeleted] = useState(false);
   const [rally, setRally] = useState<RallyView | null>(null);
   const [responses, setResponses] = useState<ResponseView[]>([]);
   const [activity, setActivity] = useState("");
@@ -75,6 +83,7 @@ function CreatorPage() {
     }
     if (request !== requestNumber.current) return;
     setRally(view.rally);
+    setDeleted("deleted" in view && !!view.deleted);
     setResponses(view.responses);
     if (view.rally) {
       setActivity(view.rally.activity);
@@ -178,6 +187,12 @@ function CreatorPage() {
   if (loading) return <Shell>Loading…</Shell>;
 
   if (!rally) {
+    if (deleted && !error)
+      return (
+        <Shell>
+          <DeletedRally />
+        </Shell>
+      );
     return (
       <Shell>
         <h1 className="text-lg font-bold">
@@ -373,9 +388,12 @@ function CreatorPage() {
 
         <details className="text-sm">
           <summary>Private management link</summary>
-          <p className="mt-1 break-all text-xs text-muted-foreground">
+          <a
+            href={creatorUrl}
+            className="mt-1 block break-all text-xs text-muted-foreground underline"
+          >
             {creatorUrl}
-          </p>
+          </a>
           <button
             type="button"
             onClick={() => copy(creatorUrl, "creator")}
@@ -678,6 +696,36 @@ function CreatorPage() {
       </section>
 
       <SaveRallySection creatorToken={creatorToken} />
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          if (
+            !window.confirm(
+              "Permanently delete this Rally and all its responses? Its links will stop working. This cannot be undone.",
+            )
+          )
+            return;
+          setBusy(true);
+          setError(null);
+          try {
+            await remove({ data: { creatorToken } });
+            ++requestNumber.current;
+            await navigate({ to: signedIn ? "/my-rallies" : "/" });
+          } catch (err) {
+            setError(
+              err instanceof Error
+                ? err.message
+                : "Could not delete this Rally.",
+            );
+          } finally {
+            setBusy(false);
+          }
+        }}
+        className="mt-6 w-full border border-border px-4 py-3 text-sm disabled:opacity-50"
+      >
+        Delete Rally
+      </button>
     </Shell>
   );
 }

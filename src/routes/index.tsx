@@ -1,9 +1,12 @@
 import { siteUrl } from "@/lib/site-url";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { PlaceInput } from "@/components/PlaceInput";
+import { EmailSignIn } from "@/components/EmailSignIn";
+import { useSession } from "@/hooks/useSession";
+import { createRallySchema } from "@/lib/rally-schema";
 import { createRally } from "@/lib/rally.functions";
 import {
   ACTIVITY_SUGGESTIONS,
@@ -41,6 +44,8 @@ export const Route = createFileRoute("/")({
 });
 
 function CreateRallyPage() {
+  const { signedIn, loading: sessionLoading } = useSession();
+  const [showLogin, setShowLogin] = useState(false);
   const navigate = useNavigate();
   const create = useServerFn(createRally);
 
@@ -62,6 +67,26 @@ function CreateRallyPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("rally:pending-draft");
+      if (!stored) return;
+      const pending = createRallySchema.parse(JSON.parse(stored));
+      setActivity(pending.activity);
+      setTimeMode(pending.timeMode);
+      setStartsAt(
+        pending.startsAt ? toLocalInputValue(new Date(pending.startsAt)) : "",
+      );
+      setLocationMode(pending.locationMode);
+      setLocation(pending.location ?? "");
+      setCandidates(
+        pending.candidates.map((value) => toLocalInputValue(new Date(value))),
+      );
+    } catch {
+      // Malformed or unavailable browser storage must not prevent creation.
+    }
+  }, []);
+
   function regenerate(w: DateWindow, t: TimeOfDay) {
     setCandidates(generateCandidates(w, t));
   }
@@ -76,24 +101,37 @@ function CreateRallyPage() {
     }
     setBusy(true);
     try {
-      const result = await create({
-        data: {
-          activity: resolved,
-          status,
-          timeMode,
-          startsAt:
-            timeMode === "specific" && startsAt
-              ? new Date(startsAt).toISOString()
-              : null,
-          locationMode:
-            locationMode === "specific" && location.trim()
-              ? "specific"
-              : "open",
-          location:
-            locationMode === "specific" ? location.trim() || null : null,
-          candidates: list.map((v) => new Date(v).toISOString()),
-        },
+      const data = createRallySchema.parse({
+        activity: resolved,
+        status,
+        timeMode,
+        startsAt:
+          timeMode === "specific" && startsAt
+            ? new Date(startsAt).toISOString()
+            : null,
+        locationMode:
+          locationMode === "specific" && location.trim() ? "specific" : "open",
+        location: locationMode === "specific" ? location.trim() || null : null,
+        candidates: list.map((v) => new Date(v).toISOString()),
       });
+      if (status === "draft" && !signedIn) {
+        try {
+          localStorage.setItem("rally:pending-draft", JSON.stringify(data));
+        } catch {
+          setError(
+            "Keep this tab open while signing in to preserve your plan.",
+          );
+        }
+        setShowLogin(true);
+        setBusy(false);
+        return;
+      }
+      const result = await create({ data });
+      try {
+        localStorage.removeItem("rally:pending-draft");
+      } catch {
+        /* Optional browser storage. */
+      }
       navigate({
         to: "/m/$creatorToken",
         params: { creatorToken: result.creatorToken },
@@ -315,7 +353,7 @@ function CreateRallyPage() {
           </button>
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || sessionLoading}
             onClick={() => void createPlan("draft")}
             className="w-full border border-border px-4 py-3 text-sm disabled:opacity-50"
           >
@@ -323,6 +361,16 @@ function CreateRallyPage() {
           </button>
         </div>
       </form>
+      {showLogin && !signedIn && (
+        <section className="mt-4 space-y-2 border border-border p-3">
+          <p className="text-sm">Sign in to save your draft.</p>
+          <EmailSignIn
+            returnTo="/"
+            buttonLabel="Email sign-in link"
+            onCancel={() => setShowLogin(false)}
+          />
+        </section>
+      )}
     </main>
   );
 }

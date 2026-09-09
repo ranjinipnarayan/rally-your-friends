@@ -16,14 +16,14 @@ beforeAll(async () => {
 afterAll(() => db.close());
 
 describe("fresh database migrations", () => {
-  it("creates all six application tables with RLS", async () => {
+  it("creates all seven application tables with RLS", async () => {
     const { rows } = await db.query<{
       relname: string;
       relrowsecurity: boolean;
     }>(
       `SELECT relname, relrowsecurity FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relkind = 'r'`,
     );
-    expect(rows).toHaveLength(6);
+    expect(rows).toHaveLength(7);
     expect(rows.every((r) => r.relrowsecurity)).toBe(true);
   });
   it("reserves exactly 150 of 200 concurrent attempts", async () => {

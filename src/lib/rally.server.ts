@@ -178,6 +178,12 @@ export async function createPlan(
   data: CreateRallyInput,
   userId: string | null,
 ) {
+  if (data.status === "draft" && !userId)
+    throw new RallyError(
+      "unauthorized",
+      "Please sign in to save a draft.",
+      401,
+    );
   const { data: row, error } = await db
     .rpc("create_rally", {
       p_payload: data,
@@ -200,7 +206,12 @@ export async function createPlan(
 
 export async function inviteView(inviteToken: string) {
   const found = await byToken(inviteToken, "invite_token");
-  if (!found || !found.published_at) return { rally: null, responseCount: 0 };
+  if (!found || !found.published_at)
+    return {
+      rally: null,
+      responseCount: 0,
+      deleted: !found && (await wasDeleted(inviteToken, "invite_token")),
+    };
   const row = await refreshed(found);
   const [candidates, count] = await Promise.all([
     candidatesFor(row.id),
@@ -256,6 +267,9 @@ export async function organizerView(
       responses: [],
       inviteToken: null,
       creatorToken: null,
+      deleted:
+        "creatorToken" in lookup &&
+        (await wasDeleted(lookup.creatorToken, "creator_token")),
     };
   authorize(
     result.data,
@@ -313,6 +327,65 @@ export async function managePlan(
   });
   check(error);
   return { ok: true };
+}
+
+export async function deletePlan(
+  userId: string | null,
+  lookup: { id: string } | { creatorToken: string },
+) {
+  if ("id" in lookup && !userId)
+    throw new RallyError("unauthorized", "Please sign in.", 401);
+  const result =
+    "id" in lookup
+      ? await db
+          .from("rallies")
+          .select("*")
+          .eq("id", lookup.id)
+          .eq("user_id", userId!)
+          .maybeSingle()
+      : {
+          data: await byToken(lookup.creatorToken, "creator_token"),
+          error: null,
+        };
+  check(result.error);
+  if (!result.data)
+    throw new RallyError(
+      "not_found",
+      "This Rally was not found in your account.",
+      404,
+    );
+  authorize(
+    result.data,
+    userId,
+    "creatorToken" in lookup ? lookup.creatorToken : undefined,
+  );
+  // The transaction rechecks ownership under a row lock before deleting data.
+  const { data, error } = await db.rpc("delete_rally", {
+    p_rally_id: result.data.id,
+    p_user_id: userId,
+    p_creator_token: "creatorToken" in lookup ? lookup.creatorToken : null,
+  });
+  check(error);
+  if (!data)
+    throw new RallyError(
+      "not_found",
+      "This Rally was not found in your account.",
+      404,
+    );
+  return { deleted: true };
+}
+
+async function wasDeleted(
+  token: string,
+  column: "invite_token" | "creator_token",
+) {
+  const { data, error } = await db
+    .from("deleted_rallies")
+    .select("deleted_at")
+    .eq(column, token)
+    .maybeSingle();
+  check(error);
+  return !!data;
 }
 
 export async function saveToAccount(creatorToken: string, userId: string) {

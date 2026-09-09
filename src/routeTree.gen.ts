@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MyRalliesRouteImport } from './routes/my-rallies'
+import { Route as DotwellKnownAppleAppSiteAssociationRouteImport } from './routes/[.]well-known/apple-app-site-association'
 import { Route as MCreatorTokenRouteImport } from './routes/m.$creatorToken'
 import { Route as RInviteTokenRouteImport } from './routes/r.$inviteToken'
 import { Route as ApiV1SplatRouteImport } from './routes/api/v1/$'
@@ -38,6 +39,12 @@ const MyRalliesRoute = MyRalliesRouteImport.update({
   path: '/my-rallies',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DotwellKnownAppleAppSiteAssociationRoute =
+  DotwellKnownAppleAppSiteAssociationRouteImport.update({
+    id: '/.well-known/apple-app-site-association',
+    path: '/.well-known/apple-app-site-association',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const MCreatorTokenRoute = MCreatorTokenRouteImport.update({
   id: '/m/$creatorToken',
   path: '/m/$creatorToken',
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/my-rallies': typeof MyRalliesRoute
+  '/.well-known/apple-app-site-association': typeof DotwellKnownAppleAppSiteAssociationRoute
   '/m/$creatorToken': typeof MCreatorTokenRoute
   '/r/$inviteToken': typeof RInviteTokenRoute
   '/api/v1/$': typeof ApiV1SplatRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/my-rallies': typeof MyRalliesRoute
+  '/.well-known/apple-app-site-association': typeof DotwellKnownAppleAppSiteAssociationRoute
   '/m/$creatorToken': typeof MCreatorTokenRoute
   '/r/$inviteToken': typeof RInviteTokenRoute
   '/api/v1/$': typeof ApiV1SplatRoute
@@ -85,6 +94,7 @@ export interface FileRoutesById {
   '/llms.txt': typeof LlmsDottxtRoute
   '/login': typeof LoginRoute
   '/my-rallies': typeof MyRalliesRoute
+  '/.well-known/apple-app-site-association': typeof DotwellKnownAppleAppSiteAssociationRoute
   '/m/$creatorToken': typeof MCreatorTokenRoute
   '/r/$inviteToken': typeof RInviteTokenRoute
   '/api/v1/$': typeof ApiV1SplatRoute
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/llms.txt'
     | '/login'
     | '/my-rallies'
+    | '/.well-known/apple-app-site-association'
     | '/m/$creatorToken'
     | '/r/$inviteToken'
     | '/api/v1/$'
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/llms.txt'
     | '/login'
     | '/my-rallies'
+    | '/.well-known/apple-app-site-association'
     | '/m/$creatorToken'
     | '/r/$inviteToken'
     | '/api/v1/$'
@@ -117,6 +129,7 @@ export interface FileRouteTypes {
     | '/llms.txt'
     | '/login'
     | '/my-rallies'
+    | '/.well-known/apple-app-site-association'
     | '/m/$creatorToken'
     | '/r/$inviteToken'
     | '/api/v1/$'
@@ -128,6 +141,7 @@ export interface RootRouteChildren {
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   LoginRoute: typeof LoginRoute
   MyRalliesRoute: typeof MyRalliesRoute
+  DotwellKnownAppleAppSiteAssociationRoute: typeof DotwellKnownAppleAppSiteAssociationRoute
   MCreatorTokenRoute: typeof MCreatorTokenRoute
   RInviteTokenRoute: typeof RInviteTokenRoute
   ApiV1SplatRoute: typeof ApiV1SplatRoute
@@ -162,6 +176,13 @@ declare module '@tanstack/react-router' {
       path: '/my-rallies'
       fullPath: '/my-rallies'
       preLoaderRoute: typeof MyRalliesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/apple-app-site-association': {
+      id: '/.well-known/apple-app-site-association'
+      path: '/.well-known/apple-app-site-association'
+      fullPath: '/.well-known/apple-app-site-association'
+      preLoaderRoute: typeof DotwellKnownAppleAppSiteAssociationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/m/$creatorToken': {
@@ -200,6 +221,8 @@ const rootRouteChildren: RootRouteChildren = {
   LlmsDottxtRoute: LlmsDottxtRoute,
   LoginRoute: LoginRoute,
   MyRalliesRoute: MyRalliesRoute,
+  DotwellKnownAppleAppSiteAssociationRoute:
+    DotwellKnownAppleAppSiteAssociationRoute,
   MCreatorTokenRoute: MCreatorTokenRoute,
   RInviteTokenRoute: RInviteTokenRoute,
   ApiV1SplatRoute: ApiV1SplatRoute,

@@ -22,8 +22,11 @@ npx supabase db push --dry-run
 npx supabase db push
 ```
 
-For a fresh project, the dry-run includes five migrations: the three application
-migrations, the Places budget, and `20260908232741_rally_lifecycle.sql`. For an
+For a fresh project, the dry-run includes six migrations: the three application
+migrations, the Places budget, `20260908232741_rally_lifecycle.sql`, and
+`20260909193502_rally_deletion.sql`. Apply the deletion migration before deploying
+the Pages version that exposes deletion and deleted-link pages. It adds the
+service-only link records and an atomic, ownership-checked deletion RPC. For an
 existing project, it should list only unapplied migrations. Apply the lifecycle
 migration once **before** deploying this version of Pages and the image renderer.
 It preserves existing data, replaces the older status values, and adds publication,
@@ -45,9 +48,10 @@ To regenerate public schema types after future migrations:
 npx supabase gen types typescript --linked --schema public > src/integrations/supabase/types.ts
 ```
 
-The current generator omits SQL input nullability. Preserve the three documented
+The current generator omits SQL input nullability. Preserve the five documented
 `string | null` annotations in `Functions`: `create_rally.Args.p_user_id`,
-`manage_rally.Args.p_user_id`, and `manage_rally.Args.p_creator_token`. They model
+`manage_rally.Args.p_user_id`, `manage_rally.Args.p_creator_token`,
+`delete_rally.Args.p_user_id`, and `delete_rally.Args.p_creator_token`. They model
 anonymous web creation and the mutually exclusive account/capability checks.
 Run type checking after regeneration.
 

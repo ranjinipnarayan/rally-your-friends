@@ -14,6 +14,24 @@ export type Database = {
   };
   public: {
     Tables: {
+      deleted_rallies: {
+        Row: {
+          creator_token: string;
+          deleted_at: string;
+          invite_token: string;
+        };
+        Insert: {
+          creator_token: string;
+          deleted_at?: string;
+          invite_token: string;
+        };
+        Update: {
+          creator_token?: string;
+          deleted_at?: string;
+          invite_token?: string;
+        };
+        Relationships: [];
+      };
       location_suggestions: {
         Row: {
           created_at: string;
@@ -274,7 +292,6 @@ export type Database = {
           p_creator_token: string;
           p_invite_token: string;
           p_payload: Json;
-          // This non-STRICT SQL function accepts NULL for anonymous creation.
           p_user_id: string | null;
         };
         Returns: {
@@ -305,9 +322,16 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      delete_rally: {
+        Args: {
+          p_creator_token: string | null;
+          p_rally_id: string;
+          p_user_id: string | null;
+        };
+        Returns: boolean;
+      };
       manage_rally: {
         Args: {
-          // Either the authenticated owner or the anonymous capability is used.
           p_creator_token: string | null;
           p_patch: Json;
           p_rally_id: string;

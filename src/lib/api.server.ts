@@ -4,6 +4,7 @@ import { createRallySchema, updateRallySchema } from "./rally-schema";
 import { RallyError } from "./rally-error";
 import {
   createPlan,
+  deletePlan,
   listPlans,
   managePlan,
   organizerView,
@@ -84,7 +85,7 @@ export async function handleApi(request: Request): Promise<Response> {
       ? ["GET", "POST"]
       : me
         ? ["GET"]
-        : ["GET", "PATCH"];
+        : ["GET", "PATCH", "DELETE"];
     if (!allowed.includes(request.method)) {
       return json(
         {
@@ -104,6 +105,16 @@ export async function handleApi(request: Request): Promise<Response> {
       return json(created, 201, { Location: `/api/v1/rallies/${created.id}` });
     }
     const id = z.string().uuid().parse(detail![1]);
+    if (request.method === "DELETE") {
+      await deletePlan(user.id, { id });
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Cache-Control": "private, no-store",
+          "Referrer-Policy": "no-referrer",
+        },
+      });
+    }
     if (request.method === "PATCH") {
       const patch = updateRallySchema.parse(await readJson(request));
       await managePlan(user.id, { id }, patch);

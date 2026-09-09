@@ -3,6 +3,7 @@ import { RallyError } from "../src/lib/rally-error";
 
 const service = vi.hoisted(() => ({
   createPlan: vi.fn(),
+  deletePlan: vi.fn(),
   listPlans: vi.fn(),
   managePlan: vi.fn(),
   organizerView: vi.fn(),
@@ -54,6 +55,39 @@ beforeEach(() => {
 });
 
 describe("native organizer JSON API", () => {
+  it("deletes only as the verified owner and returns an empty 204", async () => {
+    const response = await handleApi(request(`/rallies/${id}`, "DELETE"));
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(service.deletePlan).toHaveBeenCalledWith("organizer", { id });
+    expect(service.organizerView).not.toHaveBeenCalled();
+  });
+  it("requires login for deleting and saving drafts", async () => {
+    auth.requestUser.mockRejectedValue(
+      new RallyError("unauthorized", "Sign in", 401),
+    );
+    expect((await handleApi(request(`/rallies/${id}`, "DELETE"))).status).toBe(
+      401,
+    );
+    expect(
+      (
+        await handleApi(
+          request("/rallies", "POST", { ...input, status: "draft" }),
+        )
+      ).status,
+    ).toBe(401);
+    expect(service.deletePlan).not.toHaveBeenCalled();
+    expect(service.createPlan).not.toHaveBeenCalled();
+  });
+  it("does not reveal another account's deleted rally", async () => {
+    service.deletePlan.mockRejectedValue(
+      new RallyError("not_found", "Not found", 404),
+    );
+    expect((await handleApi(request(`/rallies/${id}`, "DELETE"))).status).toBe(
+      404,
+    );
+  });
   it("requires authentication before a create reaches the backend", async () => {
     auth.requestUser.mockRejectedValue(
       new RallyError("unauthorized", "Sign in", 401),

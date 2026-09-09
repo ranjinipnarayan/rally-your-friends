@@ -66,3 +66,13 @@ export const updateRally = createServerFn({ method: "POST" })
     const { creatorToken, ...patch } = data;
     return managePlan(context.userId, { creatorToken }, patch);
   });
+
+export const deleteRally = createServerFn({ method: "POST" })
+  .middleware([optionalSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ creatorToken: tokenSchema }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { deletePlan } = await import("./rally.server");
+    return deletePlan(context.userId, data);
+  });
