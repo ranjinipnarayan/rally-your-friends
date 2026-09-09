@@ -35,8 +35,8 @@ function LoginPage() {
       ) : (
         <div className="mt-3 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Only needed to find Rallies you already made. Creating or answering a Rally never needs
-            an account.
+            Sign in to save drafts and find your Rallies. You can still create and
+            share a Rally, or answer one, without an account.
           </p>
           <EmailSignIn returnTo="/my-rallies" buttonLabel="Send sign-in email" />
         </div>

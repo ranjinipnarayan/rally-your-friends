@@ -118,7 +118,7 @@ select day, requests from private.places_request_budget order by day desc limit 
 Reference: [Google pricing](https://developers.google.com/maps/billing-and-pricing/pricing)
 and [API quotas](https://developers.google.com/maps/documentation/places/web-service/usage-and-billing).
 
-## 4. Free email magic links
+## 4. Free email links and codes
 
 Create a Resend **Free** account. Verify a sending domain/subdomain you own using
 the exact SPF/DKIM DNS records Resend provides. Preserve existing mail records;
@@ -136,7 +136,17 @@ In Supabase Authentication → Email/SMTP, enable custom SMTP with:
 | Sender      | `help@rally-your-friends.com` |
 | Sender name | Rally                                     |
 
-Keep the magic-link email template's confirmation URL. Set Supabase's **Site URL**
+In Supabase Authentication → Email Templates, set both **Magic Link** and
+**Confirm signup** bodies to `supabase/templates/sign-in.html`, with subject
+`Your Rally sign-in code and link`. It includes `{{ .Token }}` for cross-device
+code entry and keeps `{{ .ConfirmationURL }}` for existing magic links. Supabase
+checks the code and establishes the session; Rally never stores or generates it.
+Production uses 8-digit codes with a one-hour expiry. Keep existing send and
+verification rate limits. The website also accepts “I already have a code”
+without sending another email. Both methods consume the same one-time credential.
+See [email templates](https://supabase.com/docs/guides/auth/auth-email-templates).
+
+Set Supabase's **Site URL**
 to `https://rally-your-friends.com`. Allow redirects for
 `https://rally-your-friends.com/**`, `https://www.rally-your-friends.com/**`,
 `https://rally-your-friends.pages.dev/**`, `http://localhost:3000/**`, and

@@ -366,7 +366,7 @@ function CreateRallyPage() {
           <p className="text-sm">Sign in to save your draft.</p>
           <EmailSignIn
             returnTo="/"
-            buttonLabel="Email sign-in link"
+            buttonLabel="Send sign-in email"
             onCancel={() => setShowLogin(false)}
           />
         </section>

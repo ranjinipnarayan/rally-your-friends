@@ -2,8 +2,8 @@
 
 **Production base URL:** `https://rally-your-friends.com/api/v1`
 
-Authentication is **email magic links only**: Supabase Auth creates/identifies the
-user and sends the link through Resend SMTP as `help@rally-your-friends.com`.
+Authentication is **email magic links or one-time codes**: Supabase Auth creates/identifies the
+user and sends both in one email through Resend SMTP as `help@rally-your-friends.com`.
 There is no Sign in with Apple or other OAuth-provider flow. Email delivery and
 web sign-in are configured. The native callback
 `com.example.RallyMessages://auth/callback` is allowlisted in Supabase.
@@ -51,6 +51,16 @@ key, or a creator token. Native apps use the project's public URL/key only with
 the Supabase Auth SDK to obtain/refresh a session. The Rally API verifies that
 session and derives ownership from the backend user; callers never supply an
 owner ID. Refresh tokens go to Supabase Auth, not this API.
+
+For cross-device login, request the usual Supabase `signInWithOtp` email, then
+verify its code on the destination device with
+`verifyOtp({ email, token: code, type: "email" })`. Production codes are eight
+digits and expire after one hour. Use the returned session's access token for
+this API. The code and magic link are alternatives; using one consumes it.
+An existing code can be entered without sending another email. Never send codes
+to Rally REST endpoints or store them in logs. The
+[native integration guide](./native-integration.md#containing-app-email-login)
+includes the Swift SDK call and shared-session handling.
 
 POST and PATCH require `Content-Type: application/json`. Maximum body size is
 **16,384 bytes (16 KiB)**. JSON request names are camelCase; unknown fields are

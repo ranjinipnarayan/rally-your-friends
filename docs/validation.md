@@ -196,3 +196,20 @@ entitlements and URL handler described in the native integration guide; this
 website deployment alone does not activate those native capabilities. The new
 draft-login UI, delete confirmation, and app-installed/app-absent link behavior
 still need interactive device/browser checks.
+
+## Email codes — September 9, 2026
+
+Supabase's Magic Link and Confirm signup templates now include both the code and
+existing confirmation URL. Read-back verification confirmed both templates and
+subjects, with SMTP, redirect URLs, send/verification limits, eight-digit length,
+and one-hour expiry preserved.
+
+Live verification used unsent admin-generated credentials and independent Auth
+clients: new-account and existing-account email codes established sessions accepted
+by production `/api/v1/me`; incorrect and reused codes were rejected. A separate
+magic link still signed in on the website, after which its code was rejected as
+used. Temporary sessions were revoked and accounts removed. No test email was
+sent. Website browser interaction and the native code-entry screen still need
+device verification. Typecheck, lint, 127 tests, and production build passed.
+Cloudflare runtime HTTP smoke checks passed, and browser assets contained none
+of the configured privileged keys.

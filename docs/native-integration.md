@@ -1,6 +1,6 @@
 # Native integration setup
 
-Rally uses **email magic links only**, sent through Resend SMTP by Supabase Auth.
+Rally uses **email sign-in with a magic link or one-time code**, sent through Resend SMTP by Supabase Auth.
 There is no Sign in with Apple or other OAuth-provider flow. This repository
 owns the website and shared backend; the iOS organizer app and iMessage extension
 live in [ranjinipnarayan/rally](https://github.com/ranjinipnarayan/rally).
@@ -59,6 +59,31 @@ try await supabase.auth.signInWithOTP(
 // In the containing app's callback handler, after checking its URL:
 try await supabase.auth.session(from: url)
 ```
+
+The same email also includes an **8-digit code**, valid for one hour. Add a code
+entry screen to the containing app so someone can read email on another device:
+
+```swift
+try await supabase.auth.verifyOTP(
+    email: email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+    token: code.trimmingCharacters(in: .whitespacesAndNewlines),
+    type: .email
+)
+let session = try await supabase.auth.session
+// Pass session through the existing verified-account/shared-Keychain flow.
+```
+
+Use `type: .email` for both new and existing accounts. Offer “I already have a
+code” without sending another email. The person must enter the same email
+address; opening the link consumes the same credential, so they should use the
+code instead when signing in elsewhere. Keep codes in memory only. Show expired,
+used, invalid, and throttled errors; resend only on an explicit request. Verify
+`GET /api/v1/me` and update the extension's shared session after successful code
+verification, just as after a callback. No new Rally REST endpoint is needed.
+
+The website and hosted email template support codes. **The native repository
+still needs this code-entry UI and device verification.** See
+[Swift verifyOTP](https://supabase.com/docs/reference/swift/auth-verifyotp).
 
 Supabase creates the Auth user on first sign-in and reuses the account afterward.
 Confirm the authenticated backend identity with `GET /api/v1/me`. Sending an email
