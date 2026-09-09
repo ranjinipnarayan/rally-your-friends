@@ -202,10 +202,20 @@ Before releasing either native target, verify these on devices:
   ambiguous connection failure.
 - Anonymous browser replies, updated totals and Needs You flags, explicit
   confirmation, and the final message inserted into the current conversation.
-- Cancellation, archive/unarchive, and Completed/Past after the event time.
+- Cancellation, deletion, and Completed/Past after the event time.
 - Private drafts staying unshared; no creator links or session secrets inserted
   into Messages; no contacts permission requested.
 
 URL scheme registration, signed entitlements, shared storage, native screens,
 and message insertion are owned by the native project and still require device
 verification. Website API tests cannot substitute for these device checks.
+
+## Replace archive with delete
+
+Remove Archive/Unarchive controls from the native app. Use the existing
+`DELETE /api/v1/rallies/:id` endpoint after explicit deletion confirmation, then
+remove the item from local state and refresh My Rallies. The API rejects
+`archive`/`unarchive` actions with HTTP 400; it never converts them into deletion.
+`archivedAt` is a deprecated compatibility field that now always returns null.
+Previously archived plans reappear according to their current lifecycle and next
+action. Cancelled and Completed plans remain in Past until explicitly deleted.

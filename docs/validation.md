@@ -213,3 +213,14 @@ sent. Website browser interaction and the native code-entry screen still need
 device verification. Typecheck, lint, 127 tests, and production build passed.
 Cloudflare runtime HTTP smoke checks passed, and browser assets contained none
 of the configured privileged keys.
+
+## Archiving retired — September 9, 2026
+
+Removed Archive/Unarchive controls and archived labels. Website and REST input
+validation reject archive actions; deletion remains the explicit DELETE operation.
+Previously archived plans are listed by lifecycle and next action, and the
+deprecated `archivedAt` response field is always null for existing clients.
+Historical migration fields remain in the database without affecting the app;
+no existing Rally is deleted by this change. Tests cover archive rejection without
+mutation and all lifecycle sections for previously archived plans. Typecheck,
+lint, all 130 tests, and the production build passed.

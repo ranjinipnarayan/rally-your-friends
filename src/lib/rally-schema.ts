@@ -28,9 +28,7 @@ export const updateRallySchema = z
   .extend({
     finalTime: iso.nullable().optional(),
     finalLocation: z.string().trim().max(200).nullable().optional(),
-    action: z
-      .enum(["save", "publish", "confirm", "cancel", "archive", "unarchive"])
-      .default("save"),
+    action: z.enum(["save", "publish", "confirm", "cancel"]).default("save"),
   })
   .strict();
 

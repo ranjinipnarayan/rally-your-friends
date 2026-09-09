@@ -33,7 +33,7 @@ const SECTIONS = [
     empty: "No decisions needed right now.",
   },
   { key: "active", label: "Active", empty: "No active Rallies." },
-  { key: "past", label: "Past", empty: "No past or archived Rallies." },
+  { key: "past", label: "Past", empty: "No past Rallies." },
 ] as const;
 
 function MyRalliesPage() {
@@ -159,8 +159,7 @@ function MyRalliesPage() {
                             </p>
                             {rally.location && <p>{rally.location}</p>}
                             <p className="text-xs text-muted-foreground">
-                              {STATUS_LABEL[rally.status]}
-                              {rally.archivedAt ? " · Archived" : ""} ·{" "}
+                              {STATUS_LABEL[rally.status]} ·{" "}
                               {rally.responseCount}{" "}
                               {rally.responseCount === 1
                                 ? "response"

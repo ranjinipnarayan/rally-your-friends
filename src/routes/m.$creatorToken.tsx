@@ -166,7 +166,7 @@ function CreatorPage() {
     locationMode?: "specific" | "open";
     location?: string | null;
     action?:
-      "save" | "publish" | "confirm" | "cancel" | "archive" | "unarchive";
+      "save" | "publish" | "confirm" | "cancel";
   }) {
     setBusy(true);
     setError(null);
@@ -305,8 +305,7 @@ function CreatorPage() {
     <Shell>
       <h1 className="text-lg font-bold">Manage your Rally</h1>
       <p className="mb-4 mt-1 text-sm text-muted-foreground">
-        {STATUS_LABEL[rally.status]}
-        {rally.archivedAt ? " · Archived" : ""} · {responses.length}{" "}
+        {STATUS_LABEL[rally.status]} · {responses.length}{" "}
         {responses.length === 1 ? "response" : "responses"}
       </p>
       <p className="mb-4 border border-border p-3 text-sm" aria-live="polite">
@@ -677,21 +676,6 @@ function CreatorPage() {
           >
             Cancel Rally
           </button>
-        )}
-        <button
-          type="button"
-          disabled={busy || editing}
-          onClick={() =>
-            void patch({ action: rally.archivedAt ? "unarchive" : "archive" })
-          }
-          className="w-full border border-border px-4 py-3 text-sm disabled:opacity-50"
-        >
-          {rally.archivedAt ? "Unarchive Rally" : "Archive Rally"}
-        </button>
-        {!rally.archivedAt && (
-          <p className="text-xs text-muted-foreground">
-            Archiving moves this Rally to Past in your account.
-          </p>
         )}
       </section>
 

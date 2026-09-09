@@ -171,7 +171,7 @@ the authenticated organizer. Response:
 
 The `Location` header is `/api/v1/rallies/11111111-1111-4111-8111-111111111111`.
 Use the returned URL rather than building it locally. A draft returns this same
-shape but its URL remains private until Publish. Cancelling or archiving an
+shape but its URL remains private until Publish. Cancelling an
 unpublished draft does not publish it; inspect `rally.publishedAt` in detail.
 
 To save an incomplete draft, use the same authenticated `POST /rallies` endpoint
@@ -281,7 +281,7 @@ the result after explicit confirmation of a poll:
 ```
 
 `publishedAt` is null for unpublished plans, including cancelled drafts.
-`archivedAt` is null unless archived. `finalTime`/`finalLocation` can be null;
+`archivedAt` is deprecated and always null for compatibility with existing clients. `finalTime`/`finalLocation` can be null;
 organizer detail includes tentative saved choices before confirmation. Public
 Open pages keep the original question until the organizer locks the plan.
 `responsesOpen` is false for closed states or an expired response deadline.
@@ -328,8 +328,6 @@ Then, on an explicit organizer confirmation, send:
 | `publish` | Validate a complete Draft, make it Open/public, start a fresh 30-day reply window |
 | `confirm` | Open only; require a future final time and nonblank place, then lock the plan |
 | `cancel` | Close a Draft, Open, or Confirmed plan; Completed cannot be cancelled |
-| `archive` | Set `archivedAt` and move to Past without changing lifecycle or closing replies |
-| `unarchive` | Clear `archivedAt`; Cancelled/Completed still stay in Past |
 
 All creation fields are optional in PATCH and may edit **Drafts only**. Open
 plans accept `finalTime` (future ISO timestamp or null) and `finalLocation`
@@ -337,8 +335,14 @@ plans accept `finalTime` (future ISO timestamp or null) and `finalLocation`
 Confirm uses those choices, falling back to original `startsAt`/`location`; final
 choices may also be supplied in the same Confirm request. Blank locations become
 null and cannot be confirmed. Confirmed/Cancelled/Completed plans cannot edit
-their final choices. Send Cancel/Archive/Unarchive as action-only requests.
+their final choices. Send Cancel as an action-only request.
 Do not send `status`, `nextAction`, ownership IDs, or publication timestamps.
+
+Archiving has been removed. PATCH actions `archive` and `unarchive` return
+`400 invalid_request`; they never delete a Rally. Replace archive controls with
+an explicit Delete confirmation and `DELETE /rallies/:id`. Previously archived
+Rallies return to the section determined by their lifecycle and next action.
+Only Cancelled and Completed Rallies belong in Past.
 
 ### DELETE /rallies/:id
 

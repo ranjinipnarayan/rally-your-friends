@@ -22,7 +22,8 @@ export type RallyView = {
   location: string | null;
   status: RallyStatus;
   nextAction: NextAction;
-  archivedAt: string | null;
+  /** @deprecated Compatibility field; always null. Use DELETE to remove a Rally. */
+  archivedAt: null;
   publishedAt: string | null;
   updatedAt: string;
   responsesOpen: boolean;

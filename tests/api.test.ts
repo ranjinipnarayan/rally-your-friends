@@ -55,6 +55,17 @@ beforeEach(() => {
 });
 
 describe("native organizer JSON API", () => {
+  it.each(["archive", "unarchive"])(
+    "rejects retired %s actions without deleting",
+    async (action) => {
+      const response = await handleApi(
+        request(`/rallies/${id}`, "PATCH", { action }),
+      );
+      expect(response.status).toBe(400);
+      expect(service.managePlan).not.toHaveBeenCalled();
+      expect(service.deletePlan).not.toHaveBeenCalled();
+    },
+  );
   it("deletes only as the verified owner and returns an empty 204", async () => {
     const response = await handleApi(request(`/rallies/${id}`, "DELETE"));
     expect(response.status).toBe(204);

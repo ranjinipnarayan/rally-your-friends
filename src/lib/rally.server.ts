@@ -67,7 +67,8 @@ function toView(
     location: row.location,
     status: row.status as RallyStatus,
     nextAction: row.next_action as NextAction,
-    archivedAt: row.archived_at,
+    // Retained for older native decoders; archiving is no longer supported.
+    archivedAt: null,
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
     responsesOpen:
@@ -441,7 +442,7 @@ export async function listPlans(
     for (const r of data ?? []) {
       const nextAction = r.next_action as NextAction;
       const past =
-        !!r.archived_at || r.status === "cancelled" || r.status === "completed";
+        r.status === "cancelled" || r.status === "completed";
       const needsYou =
         r.status === "draft" ||
         ["choose_time", "choose_location", "finalize"].includes(nextAction);
@@ -455,7 +456,7 @@ export async function listPlans(
         location: r.final_location ?? r.location,
         status: r.status as RallyStatus,
         nextAction,
-        archivedAt: r.archived_at,
+        archivedAt: null,
         responseCount: r.responses[0]?.count ?? 0,
         section: past ? "past" : needsYou ? "needs_you" : "active",
       });

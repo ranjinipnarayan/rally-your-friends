@@ -14,7 +14,8 @@ export type SavedRally = {
   location: string | null;
   status: RallyStatus;
   nextAction: NextAction;
-  archivedAt: string | null;
+  /** @deprecated Compatibility field; always null. Use DELETE to remove a Rally. */
+  archivedAt: null;
   responseCount: number;
   section: "needs_you" | "active" | "past";
 };
