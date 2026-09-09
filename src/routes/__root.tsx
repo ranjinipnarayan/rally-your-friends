@@ -114,8 +114,16 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
-        {children}
+      <body className="flex min-h-dvh flex-col">
+        <div className="flex-1">{children}</div>
+        <footer className="border-t border-border px-4 py-6 text-center">
+          <a
+            href="https://testflight.apple.com/join/zqqPHTFS"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            Download the Rally app
+          </a>
+        </footer>
         <Scripts />
       </body>
     </html>
