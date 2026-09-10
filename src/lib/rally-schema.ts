@@ -18,6 +18,18 @@ const fields = {
 export const createRallySchema = z
   .object({
     ...fields,
+    timeZone: z
+      .string()
+      .max(100)
+      .refine((value) => {
+        try {
+          new Intl.DateTimeFormat("en-US", { timeZone: value });
+          return true;
+        } catch {
+          return false;
+        }
+      }, "Choose a valid timezone.")
+      .optional(),
     status: z.enum(["draft", "open"]).default("open"),
   })
   .strict();

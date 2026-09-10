@@ -4,6 +4,7 @@ import type { OgCardData } from "./og-card.ts";
 export type ImageRally = {
   activity: string;
   time_mode: string;
+  time_zone: string | null;
   starts_at: string | null;
   location: string | null;
   status: string;
@@ -33,7 +34,7 @@ export async function loadImageRally(
   const { data, error } = await db
     .from("rallies")
     .select(
-      "activity,time_mode,starts_at,location,status,published_at,final_time,final_location,expires_at,rally_candidates(id)",
+      "activity,time_mode,time_zone,starts_at,location,status,published_at,final_time,final_location,expires_at,rally_candidates(id)",
     )
     .eq("id", found.id)
     .neq("status", "draft")
@@ -43,7 +44,7 @@ export async function loadImageRally(
   return data as ImageRally | null;
 }
 
-function fmt(value: string | null) {
+function fmt(value: string | null, timeZone: string | null) {
   if (!value) return null;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
@@ -53,7 +54,8 @@ function fmt(value: string | null) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: timeZone || "UTC",
+    timeZoneName: "short",
   });
 }
 
@@ -106,8 +108,9 @@ export async function handleImage(
     // While voting is open, the preview must match the question recipients see.
     const time =
       row.status === "open"
-        ? fmt(row.starts_at)
-        : (fmt(row.final_time) ?? fmt(row.starts_at));
+        ? fmt(row.starts_at, row.time_zone)
+        : (fmt(row.final_time, row.time_zone) ??
+          fmt(row.starts_at, row.time_zone));
     const where =
       row.status === "open"
         ? row.location

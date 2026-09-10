@@ -440,3 +440,11 @@ entitlements, callback handling, secure shared sessions, and message insertion.
 Those flows still need device verification. See [native-integration.md](native-integration.md)
 for that checklist and [validation.md](validation.md) for current website/backend
 test evidence and remaining device/browser verification.
+
+### Share-image timezone
+
+Creation accepts an optional `timeZone` IANA identifier (for example,
+`America/New_York`). Clients should send the organizer's timezone alongside
+ISO timestamps. Share images use that timezone, including daylight saving
+rules for the event date. Older clients may omit it; those previews explicitly
+label their time as UTC. The timezone is preserved when confirming a poll.

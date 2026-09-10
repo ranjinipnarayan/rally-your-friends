@@ -15,6 +15,7 @@ import {
   type DateWindow,
   type TimeOfDay,
   generateCandidates,
+  currentTimeZone,
   normalizeActivity,
   toLocalInputValue,
 } from "@/lib/rally-shared";
@@ -105,6 +106,7 @@ function CreateRallyPage() {
         activity: resolved,
         status,
         timeMode,
+        timeZone: currentTimeZone(),
         startsAt:
           timeMode === "specific" && startsAt
             ? new Date(startsAt).toISOString()

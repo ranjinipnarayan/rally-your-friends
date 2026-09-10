@@ -17,6 +17,7 @@ const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
 const row: ImageRally = {
   activity: "Dinner",
   time_mode: "poll",
+  time_zone: "America/New_York",
   starts_at: null,
   location: "Cafe",
   status: "open",
@@ -173,6 +174,35 @@ describe("renderer authentication and data boundaries", () => {
       }),
     );
   });
+  it.each([
+    ["America/New_York", "2026-09-10T23:00:00Z", "Thu, Sep 10, 7:00 PM EDT"],
+    ["America/New_York", "2026-01-10T00:00:00Z", "Fri, Jan 9, 7:00 PM EST"],
+    ["America/Los_Angeles", "2026-09-10T23:00:00Z", "Thu, Sep 10, 4:00 PM PDT"],
+    ["Asia/Kolkata", "2026-09-10T23:00:00Z", "Fri, Sep 11, 4:30 AM GMT+5:30"],
+    [null, "2026-09-10T23:00:00Z", "Thu, Sep 10, 11:00 PM UTC"],
+  ])(
+    "formats previews in %s including the timezone",
+    async (timeZone, time, expected) => {
+      for (const status of ["open", "confirmed"]) {
+        const render = vi.fn(async () => new Response(png));
+        await handleImage(edgeRequest(), {
+          secret: "secret",
+          load: async () => ({
+            ...row,
+            status,
+            time_mode: "specific",
+            time_zone: timeZone,
+            starts_at: status === "open" ? time : null,
+            final_time: status === "confirmed" ? time : null,
+          }),
+          render,
+        });
+        expect(render).toHaveBeenCalledWith(
+          expect.objectContaining({ when: expected }),
+        );
+      }
+    },
+  );
   it("returns a fallback status for missing rallies and unformed plans", async () => {
     const render = vi.fn();
     for (const rally of [
@@ -345,7 +375,7 @@ describe("renderer database loading", () => {
     expect(details.searchParams.get("status")).toBe("neq.draft");
     expect(details.searchParams.get("published_at")).toBe("not.is.null");
     expect(details.searchParams.get("select")).toBe(
-      "activity,time_mode,starts_at,location,status,published_at,final_time,final_location,expires_at,rally_candidates(id)",
+      "activity,time_mode,time_zone,starts_at,location,status,published_at,final_time,final_location,expires_at,rally_candidates(id)",
     );
   });
 

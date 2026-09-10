@@ -90,6 +90,7 @@ export type Database = {
           starts_at: string | null;
           status: string;
           time_mode: string;
+          time_zone: string | null;
           updated_at: string;
           user_id: string | null;
         };
@@ -111,6 +112,7 @@ export type Database = {
           starts_at?: string | null;
           status?: string;
           time_mode: string;
+          time_zone?: string | null;
           updated_at?: string;
           user_id?: string | null;
         };
@@ -132,6 +134,7 @@ export type Database = {
           starts_at?: string | null;
           status?: string;
           time_mode?: string;
+          time_zone?: string | null;
           updated_at?: string;
           user_id?: string | null;
         };
@@ -312,6 +315,7 @@ export type Database = {
           starts_at: string | null;
           status: string;
           time_mode: string;
+          time_zone: string | null;
           updated_at: string;
           user_id: string | null;
         };
@@ -355,6 +359,7 @@ export type Database = {
           starts_at: string | null;
           status: string;
           time_mode: string;
+          time_zone: string | null;
           updated_at: string;
           user_id: string | null;
         };

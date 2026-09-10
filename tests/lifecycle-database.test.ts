@@ -27,6 +27,7 @@ type Rally = {
   confirmed_at: Date | null;
   published_at: Date | null;
   starts_at: Date | null;
+  time_zone: string | null;
   final_time: Date | null;
   final_location: string | null;
   expires_at: Date;
@@ -853,5 +854,23 @@ describe("Rally deletion", () => {
       );
       expect(result.rows[0]).toEqual({ readable: false, callable: false });
     }
+  });
+});
+
+describe("Rally timezone persistence", () => {
+  it("preserves the organizer timezone through confirmation", async () => {
+    const rally = await create({ timeZone: "America/New_York" });
+    expect(rally.time_zone).toBe("America/New_York");
+    expect(rally.starts_at?.toISOString()).toBe(future);
+    const confirmed = await manage(rally, { action: "confirm" });
+    expect(confirmed.time_zone).toBe("America/New_York");
+  });
+  it("supports older clients without guessing their timezone", async () => {
+    expect((await create()).time_zone).toBeNull();
+  });
+  it("rejects invalid timezone names", async () => {
+    await expect(create({ timeZone: "not/a-timezone" })).rejects.toThrow(
+      "valid timezone",
+    );
   });
 });
