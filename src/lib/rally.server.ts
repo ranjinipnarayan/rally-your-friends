@@ -179,12 +179,6 @@ export async function createPlan(
   data: CreateRallyInput,
   userId: string | null,
 ) {
-  if (data.status === "draft" && !userId)
-    throw new RallyError(
-      "unauthorized",
-      "Please sign in to save a draft.",
-      401,
-    );
   const { data: row, error } = await db
     .rpc("create_rally", {
       p_payload: data,
@@ -441,8 +435,7 @@ export async function listPlans(
     check(error);
     for (const r of data ?? []) {
       const nextAction = r.next_action as NextAction;
-      const past =
-        r.status === "cancelled" || r.status === "completed";
+      const past = r.status === "cancelled" || r.status === "completed";
       const needsYou =
         r.status === "draft" ||
         ["choose_time", "choose_location", "finalize"].includes(nextAction);

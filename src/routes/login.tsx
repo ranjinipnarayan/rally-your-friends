@@ -9,11 +9,15 @@ export const Route = createFileRoute("/login")({
       { title: "Log in — Rally" },
       {
         name: "description",
-        content: "Log in to Rally to keep track of the Rallies you have created.",
+        content:
+          "Log in to Rally to keep track of the Rallies you have created.",
       },
       { name: "robots", content: "noindex" },
       { property: "og:title", content: "Log in — Rally" },
-      { property: "og:description", content: "Keep track of the Rallies you have created." },
+      {
+        property: "og:description",
+        content: "Keep track of the Rallies you have created.",
+      },
     ],
   }),
   component: LoginPage,
@@ -28,17 +32,23 @@ function LoginPage() {
       {signedIn ? (
         <div className="mt-3 space-y-3 text-sm">
           <p>Signed in as {email}.</p>
-          <Link to="/my-rallies" className="inline-block border border-border px-3 py-2">
+          <Link
+            to="/my-rallies"
+            className="inline-block border border-border px-3 py-2"
+          >
             My Rallies
           </Link>
         </div>
       ) : (
         <div className="mt-3 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Sign in to save drafts and find your Rallies. You can still create and
+            Sign in to find and manage your Rallies. You can still create and
             share a Rally, or answer one, without an account.
           </p>
-          <EmailSignIn returnTo="/my-rallies" buttonLabel="Send sign-in email" />
+          <EmailSignIn
+            returnTo="/my-rallies"
+            buttonLabel="Send sign-in email"
+          />
         </div>
       )}
     </main>

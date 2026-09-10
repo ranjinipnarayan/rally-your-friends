@@ -55,6 +55,13 @@ beforeEach(() => {
 });
 
 describe("native organizer JSON API", () => {
+  it("rejects new drafts even for signed-in organizers", async () => {
+    const response = await handleApi(
+      request("/rallies", "POST", { ...input, status: "draft" }),
+    );
+    expect(response.status).toBe(400);
+    expect(service.createPlan).not.toHaveBeenCalled();
+  });
   it.each(["archive", "unarchive"])(
     "rejects retired %s actions without deleting",
     async (action) => {
@@ -74,20 +81,16 @@ describe("native organizer JSON API", () => {
     expect(service.deletePlan).toHaveBeenCalledWith("organizer", { id });
     expect(service.organizerView).not.toHaveBeenCalled();
   });
-  it("requires login for deleting and saving drafts", async () => {
+  it("requires login for deleting and creating Rallies", async () => {
     auth.requestUser.mockRejectedValue(
       new RallyError("unauthorized", "Sign in", 401),
     );
     expect((await handleApi(request(`/rallies/${id}`, "DELETE"))).status).toBe(
       401,
     );
-    expect(
-      (
-        await handleApi(
-          request("/rallies", "POST", { ...input, status: "draft" }),
-        )
-      ).status,
-    ).toBe(401);
+    expect((await handleApi(request("/rallies", "POST", input))).status).toBe(
+      401,
+    );
     expect(service.deletePlan).not.toHaveBeenCalled();
     expect(service.createPlan).not.toHaveBeenCalled();
   });

@@ -186,8 +186,8 @@ into Messages. Test app-installed, app-absent, logged-out, deleted, and
 wrong-account links on a signed device.
 
 Add a confirmed Delete action using `DELETE /rallies/:id`; accept an empty `204`
-response and remove the row from all lists. Draft saving already uses authenticated
-`POST /rallies` with `status: "draft"`; no new draft endpoint is required.
+response and remove the row from all lists. Draft creation is no longer supported;
+create complete plans with `status: "open"`. Existing drafts remain manageable on the website.
 
 ### Device checks
 

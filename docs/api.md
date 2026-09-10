@@ -121,13 +121,13 @@ Content-Type: application/json
 
 | Field | Contract |
 | --- | --- |
-| `activity` | Trimmed string, up to 200 characters; nonblank for Open/publish. A draft may be blank. Use `Let's hang out` to match the website's unspecified activity. |
+| `activity` | Trimmed string, up to 200 characters; nonblank for Open/publish. Use `Let's hang out` to match the website's unspecified activity. |
 | `timeMode` | `specific` or `poll` |
 | `startsAt` | Future ISO timestamp for an Open specific-time plan; null for a poll |
 | `candidates` | Array of timestamps, maximum 10. An Open poll requires 1–10 future times; send `[]` for a specific time. |
 | `locationMode` | `specific` or `open` |
 | `location` | String up to 200 characters, nonblank for an Open specific location; null for open location |
-| `status` | `draft` or `open`; direct creation as Confirmed is rejected |
+| `status` | `open` only (the default); other creation statuses are rejected |
 
 All four timing/location branches are supported:
 
@@ -170,31 +170,8 @@ the authenticated organizer. Response:
 ```
 
 The `Location` header is `/api/v1/rallies/11111111-1111-4111-8111-111111111111`.
-Use the returned URL rather than building it locally. A draft returns this same
-shape but its URL remains private until Publish. Cancelling an
-unpublished draft does not publish it; inspect `rally.publishedAt` in detail.
-
-To save an incomplete draft, use the same authenticated `POST /rallies` endpoint
-with `status: "draft"`. For example:
-
-```json
-{
-  "activity": "",
-  "timeMode": "poll",
-  "startsAt": null,
-  "candidates": [],
-  "locationMode": "open",
-  "location": null,
-  "status": "draft"
-}
-```
-
-Draft saving requires email sign-in on both the website and API. It returns
-`201` with the usual creation result and appears in Needs You. Update that ID
-with `PATCH` action `save`, then `publish` when complete. There is no separate
-draft endpoint and no anonymous draft creation. Website sign-in preserves the
-pending form locally when browser storage is available; it is saved to the
-backend only when the signed-in organizer chooses Save draft.
+Use the returned URL rather than building it locally. New Rallies are created Open.
+Draft creation is no longer supported. Existing drafts can still be managed or deleted.
 
 ### GET /rallies
 

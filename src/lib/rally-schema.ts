@@ -30,7 +30,7 @@ export const createRallySchema = z
         }
       }, "Choose a valid timezone.")
       .optional(),
-    status: z.enum(["draft", "open"]).default("open"),
+    status: z.literal("open").default("open"),
   })
   .strict();
 

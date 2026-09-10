@@ -12,7 +12,7 @@ link, and collect everyone’s replies in one place.
 - Share an invitation link so friends can respond without creating an account.
 - Confirm the plan and download a calendar event.
 - Sign in by email to save and revisit your rallies.
-- Manage drafts, responses, final plans, and past rallies from your account.
+- Manage responses, final plans, and past rallies from your account.
 - Share links with personalized preview images.
 
 ## Hosting
