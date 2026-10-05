@@ -27,7 +27,7 @@ function LoginPage() {
   const { signedIn, email } = useSession();
 
   return (
-    <main className="mx-auto max-w-md px-4 py-6">
+    <main className="rally-page mx-auto max-w-md px-4 py-6">
       <h1 className="text-lg font-bold">Log in</h1>
       {signedIn ? (
         <div className="mt-3 space-y-3 text-sm">

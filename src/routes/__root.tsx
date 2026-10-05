@@ -71,42 +71,38 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRoute(
-  {
-    head: () => ({
-      meta: [
-        { charSet: "utf-8" },
-        { name: "viewport", content: "width=device-width, initial-scale=1" },
-        { title: "Rally — Make a plan with one link" },
-        {
-          name: "description",
-          content:
-            "Make a plan, share a link, and bring your friends together.",
-        },
-        { name: "author", content: "Rally" },
-        { property: "og:title", content: "Rally — Make a plan with one link" },
-        {
-          property: "og:description",
-          content:
-            "Make a plan, share a link, and bring your friends together.",
-        },
-        { property: "og:type", content: "website" },
-        { name: "twitter:card", content: "summary_large_image" },
-      ],
-      links: [
-        {
-          rel: "stylesheet",
-          href: appCss,
-        },
-        { rel: "icon", type: "image/png", href: "/favicon.png" },
-      ],
-    }),
-    shellComponent: RootShell,
-    component: RootComponent,
-    notFoundComponent: NotFoundComponent,
-    errorComponent: ErrorComponent,
-  },
-);
+export const Route = createRootRoute({
+  head: () => ({
+    meta: [
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { title: "Rally — Make a plan with one link" },
+      {
+        name: "description",
+        content: "Make a plan, share a link, and bring your friends together.",
+      },
+      { name: "author", content: "Rally" },
+      { property: "og:title", content: "Rally — Make a plan with one link" },
+      {
+        property: "og:description",
+        content: "Make a plan, share a link, and bring your friends together.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+    links: [
+      {
+        rel: "stylesheet",
+        href: appCss,
+      },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+    ],
+  }),
+  shellComponent: RootShell,
+  component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: ErrorComponent,
+});
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
@@ -116,10 +112,10 @@ function RootShell({ children }: { children: ReactNode }) {
       </head>
       <body className="flex min-h-dvh flex-col">
         <div className="flex-1">{children}</div>
-        <footer className="border-t border-border px-4 py-6 text-center">
+        <footer className="rally-footer border-t border-border px-4 py-4 text-center">
           <a
             href="https://testflight.apple.com/join/zqqPHTFS"
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="inline-flex min-h-11 items-center justify-center text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             Download the Rally app
           </a>

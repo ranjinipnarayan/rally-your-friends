@@ -84,7 +84,7 @@ function MyRalliesPage() {
   }, [signedIn, email, sessionLoading, load, revision]);
 
   return (
-    <main className="mx-auto max-w-md px-4 py-6">
+    <main className="rally-page mx-auto max-w-md px-4 py-6">
       <h1 className="text-lg font-bold">My Rallies</h1>
       {sessionLoading ? (
         <p className="mt-3 text-sm text-muted-foreground">Loading…</p>

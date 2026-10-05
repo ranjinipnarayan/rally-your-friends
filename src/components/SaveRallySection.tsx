@@ -42,7 +42,10 @@ export function SaveRallySection({ creatorToken }: { creatorToken: string }) {
           setSaved(true);
         }
       } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : "Could not save this Rally.");
+        if (active)
+          setError(
+            err instanceof Error ? err.message : "Could not save this Rally.",
+          );
       }
     })();
 
@@ -64,7 +67,9 @@ export function SaveRallySection({ creatorToken }: { creatorToken: string }) {
       await save({ data: { creatorToken } });
       setSaved(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save this Rally.");
+      setError(
+        err instanceof Error ? err.message : "Could not save this Rally.",
+      );
     } finally {
       setBusy(false);
     }
@@ -73,14 +78,16 @@ export function SaveRallySection({ creatorToken }: { creatorToken: string }) {
   if (loading) return null;
 
   if (saved) {
-    return <p className="mt-10 text-sm text-muted-foreground">Saved to My Rallies</p>;
+    return (
+      <p className="mt-6 text-sm text-muted-foreground">Saved to My Rallies</p>
+    );
   }
 
   return (
-    <section className="mt-10 space-y-2 border-t border-border pt-6">
-      <h2 className="text-base font-semibold">Keep track of your Rallies</h2>
-      <p className="text-sm text-muted-foreground">
-        Save this Rally so you can come back and see how people respond.
+    <section className="rally-save-section mt-6 border-t border-border pt-4">
+      <h2 className="text-base font-semibold">keep this rally handy</h2>
+      <p className="rally-save-copy text-sm text-muted-foreground">
+        save to see your friends’ responses
       </p>
       {error && <p className="text-sm font-medium">{error}</p>}
       {showEmail ? (
@@ -97,7 +104,7 @@ export function SaveRallySection({ creatorToken }: { creatorToken: string }) {
           type="button"
           disabled={busy}
           onClick={() => void onSave()}
-          className="w-full border border-border px-4 py-3 text-base font-medium disabled:opacity-50"
+          className="rally-save-button border border-border px-3 py-2 text-sm font-medium disabled:opacity-50"
         >
           {busy ? "Saving…" : "Save my Rally"}
         </button>

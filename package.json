@@ -25,14 +25,17 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.2.1",
+    "three": "^0.186.1",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.0",
     "@eslint/js": "^9.32.0",
+    "@tanstack/router-core": "1.171.15",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^5.2.0",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
@@ -41,13 +44,12 @@
     "globals": "^15.15.0",
     "nitro": "3.0.260903-beta",
     "prettier": "^3.7.3",
+    "seroval": "1.6.7",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5",
     "vitest": "^3.2.4",
-    "wrangler": "4.130.0",
-    "seroval": "1.6.7",
-    "@tanstack/router-core": "1.171.15"
+    "wrangler": "4.130.0"
   },
   "engines": {
     "node": ">=22.14.0"

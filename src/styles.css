@@ -102,3 +102,510 @@
     color: var(--color-foreground);
   }
 }
+
+/* Web creation flow: one red accent, the original quiet form. */
+.rally-create {
+  --rally-red: oklch(0.55 0.22 27);
+}
+.rally-dot {
+  color: var(--rally-red);
+}
+.rally-journey {
+  position: relative;
+  height: 83px;
+  margin-top: 16px;
+}
+.journey-track {
+  position: absolute;
+  top: 36px;
+  left: 10%;
+  right: 10%;
+  border-top: 1px dashed var(--border);
+}
+.journey-car {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 58px;
+  pointer-events: none;
+}
+.journey-stops {
+  position: absolute;
+  inset: 54px 0 0;
+  display: flex;
+  justify-content: space-between;
+  padding-inline: 7%;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.journey-stops span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 6%;
+}
+.journey-stops i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.journey-stops .is-current {
+  color: var(--foreground);
+}
+.journey-stops .is-current i {
+  background: var(--rally-red);
+}
+.rally-create input[type="radio"] {
+  accent-color: var(--rally-red);
+}
+.rally-create input:focus-visible,
+.rally-create button:focus-visible {
+  outline: 2px solid var(--rally-red);
+  outline-offset: 3px;
+}
+.rally-create button {
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease;
+}
+.rally-create button:hover:not(:disabled) {
+  border-color: var(--rally-red);
+}
+.rally-submit {
+  position: relative;
+  overflow: hidden;
+}
+.rally-submit::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--rally-red);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 250ms ease;
+}
+.rally-submit:hover::after,
+.rally-submit:focus-visible::after {
+  transform: scaleX(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rally-create button,
+  .rally-submit::after {
+    transition: none;
+  }
+}
+
+.rally-finish {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  color: var(--foreground);
+}
+.rally-suggestions button {
+  white-space: nowrap;
+  padding-inline: 7px;
+}
+@media (max-width: 360px) {
+  .rally-suggestions {
+    gap: 4px;
+  }
+  .rally-suggestions button {
+    padding-inline: 5px;
+    font-size: 12px;
+  }
+}
+
+.rally-finish svg,
+.rally-finish canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.rally-finish canvas {
+  visibility: hidden;
+}
+.rally-finish.flag-ready canvas {
+  visibility: visible;
+}
+.rally-finish.flag-ready svg {
+  visibility: hidden;
+}
+
+.plan-card-lap {
+  position: relative;
+  margin-top: 18px;
+  margin-bottom: 18px;
+}
+.plan-card-track {
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+}
+.plan-card-car {
+  position: absolute;
+  width: 28px;
+  height: 14px;
+  offset-path: none;
+  animation: plan-card-drive 3.6s linear both;
+  transform: translate(-50%, -50%);
+}
+@keyframes plan-card-drive {
+  0% {
+    left: 0%;
+    top: 0%;
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  28% {
+    left: 100%;
+    top: 0%;
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  30% {
+    left: 100%;
+    top: 0%;
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  48% {
+    left: 100%;
+    top: 100%;
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  50% {
+    left: 100%;
+    top: 100%;
+    transform: translate(-50%, -50%) rotate(180deg);
+  }
+  78% {
+    left: 0%;
+    top: 100%;
+    transform: translate(-50%, -50%) rotate(180deg);
+  }
+  80% {
+    left: 0%;
+    top: 100%;
+    transform: translate(-50%, -50%) rotate(270deg);
+  }
+  98% {
+    left: 0%;
+    top: 0%;
+    transform: translate(-50%, -50%) rotate(270deg);
+  }
+  100% {
+    left: 0%;
+    top: 0%;
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.plan-card-car {
+  left: 0;
+  top: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .plan-card-car {
+    animation: none;
+  }
+}
+/* Match the creation page's restrained red accent. */
+.rally-manage {
+  --rally-red: oklch(0.55 0.22 27);
+}
+.rally-manage .plan-card-lap > section {
+  border: 1px solid var(--rally-red);
+}
+.rally-manage button:focus-visible,
+.rally-manage input:focus-visible,
+.rally-manage a:focus-visible {
+  outline: 2px solid var(--rally-red);
+  outline-offset: 3px;
+}
+.rally-manage button:hover:not(:disabled) {
+  border-color: var(--rally-red);
+}
+.rally-manage button.bg-foreground {
+  border-bottom: 2px solid var(--rally-red);
+}
+.rally-manage button:disabled {
+  border-bottom-color: var(--border);
+}
+
+.app-menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  font-size: 13px;
+}
+.app-menu-toggle:hover,
+.app-menu-toggle[aria-expanded="true"] {
+  border-color: var(--foreground);
+}
+.app-menu-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 208px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  box-shadow: 0 8px 28px oklch(0 0 0 / 8%);
+  font-size: 14px;
+}
+.app-menu-caption {
+  padding: 6px 10px 10px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.app-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  text-align: left;
+}
+.app-menu-item:hover {
+  background: var(--muted);
+}
+.app-menu-new {
+  color: oklch(0.55 0.22 27);
+  font-weight: 600;
+}
+.app-menu-account {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.app-menu a:focus-visible,
+.app-menu button:focus-visible {
+  outline: 2px solid oklch(0.55 0.22 27);
+  outline-offset: 2px;
+}
+
+.app-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.rally-manage button.rally-copy-link {
+  border-bottom: 1px solid var(--border);
+}
+
+/* Shared hierarchy: compact secondary controls, clear primary actions. */
+.rally-page h1 {
+  font-size: 20px;
+  line-height: 1.3;
+}
+.rally-page h2 {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.rally-page > section.mt-6 {
+  margin-top: 20px;
+}
+.rally-page button.w-full {
+  padding-block: 10px;
+  font-size: 14px;
+}
+.rally-page button.w-full:not(.bg-foreground) {
+  width: auto;
+  padding-inline: 12px;
+  padding-block: 8px;
+}
+.rally-page button.rally-copy-link {
+  padding-block: 9px;
+  font-size: 13px;
+}
+.rally-next {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  padding: 0;
+}
+.rally-manage .plan-card-lap {
+  margin-top: 14px;
+  margin-bottom: 14px;
+}
+.rally-page section[aria-label="Plan details"] {
+  padding: 14px;
+}
+.rally-secondary {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.rally-footer {
+  border-color: transparent;
+}
+
+/* A shared, restrained radius for the web interface. */
+.rally-page
+  :is(
+    input:not([type="radio"]):not([type="checkbox"]),
+    textarea,
+    select,
+    button,
+    .border
+  ),
+.app-menu-toggle,
+.app-menu-panel,
+.app-menu-item {
+  border-radius: 6px;
+}
+.rally-page section[aria-label="Plan details"] {
+  border-radius: 10px;
+}
+.rally-page li.border > a {
+  border-radius: inherit;
+}
+
+/* Lowercase all rendered web text, including nested controls and options. */
+body,
+body *,
+body *::before,
+body *::after,
+input::placeholder,
+textarea::placeholder {
+  text-transform: lowercase !important;
+}
+
+/* Keep rounding on every button, including controls outside page shells. */
+button,
+.rally-page button,
+.app-menu-toggle,
+a.app-menu-item {
+  border-radius: 8px;
+}
+
+.rally-page input::placeholder,
+.rally-page textarea::placeholder {
+  font-size: 13px;
+}
+
+/* Plan and organizer tools are two distinct visual groups. */
+.rally-manage .plan-card-lap > section {
+  background: var(--background);
+  padding: 18px;
+  box-shadow: 0 3px 14px oklch(0 0 0 / 3%);
+}
+.rally-manage .plan-card-lap dl > div:first-child dd {
+  font-size: 20px;
+  line-height: 1.35;
+}
+.rally-management {
+  margin-top: 28px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+}
+.management-label {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  letter-spacing: 0.04em;
+}
+.rally-management > section {
+  margin-top: 18px;
+}
+.rally-management > section + section {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.rally-management input,
+.rally-management textarea,
+.rally-management button:not(.bg-foreground) {
+  background: var(--background);
+}
+.rally-management h2 {
+  font-size: 13px;
+}
+.rally-management > section:first-of-type {
+  margin-top: 12px;
+}
+
+.rally-save-section h2 {
+  margin-bottom: 4px;
+}
+.rally-save-copy {
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.rally-save-button {
+  font-size: 13px;
+}
+.rally-management button.rally-delete {
+  background: transparent;
+  border: 0;
+  padding: 4px 0;
+  margin-top: 14px;
+}
+.rally-management button.rally-delete:hover {
+  color: var(--rally-red);
+}
+
+.rally-create-form {
+  position: relative;
+  padding-right: 26px;
+}
+.rally-side-track {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 52px;
+  width: 12px;
+  border-right: 1px dashed var(--border);
+  pointer-events: none;
+}
+.rally-side-car {
+  position: absolute;
+  right: -14px;
+  top: 10px;
+  width: 28px;
+  height: 14px;
+  transform: rotate(90deg);
+  transition: top 700ms ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rally-side-car {
+    transition: none;
+  }
+}
+.rally-create-form > fieldset:first-of-type {
+  margin-top: 0;
+}
+.rally-create .rally-suggestions {
+  gap: 4px;
+}
+.rally-create .rally-suggestions button {
+  padding-inline: 5px;
+  font-size: 12px;
+}
+
+.rally-side-stop {
+  position: absolute;
+  right: -3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rally-red);
+  transform: translateY(-50%);
+}
+.rally-side-stop.is-current {
+  background: var(--rally-red);
+}
+.rally-side-car {
+  z-index: 1;
+  margin-top: -7px;
+}

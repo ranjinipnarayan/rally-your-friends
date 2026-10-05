@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PlaceInput } from "@/components/PlaceInput";
 import { EmailSignIn } from "@/components/EmailSignIn";
 import { DeletedRally } from "@/components/DeletedRally";
+import { RallyFinish } from "@/components/RallyFinish";
+import { PlanCardLap } from "@/components/PlanCardLap";
 import { RallyCard } from "@/components/RallyCard";
 import { SaveRallySection } from "@/components/SaveRallySection";
 import { useSession } from "@/hooks/useSession";
@@ -34,13 +36,13 @@ export const Route = createFileRoute("/m/$creatorToken")({
   }),
   head: () => ({
     meta: [
-      { title: "Manage your Rally" },
+      { title: "Your Rally" },
       {
         name: "description",
         content: "Private page to share your Rally and see responses.",
       },
       { name: "robots", content: "noindex" },
-      { property: "og:title", content: "Manage your Rally" },
+      { property: "og:title", content: "Your Rally" },
       {
         property: "og:description",
         content: "Private management page for your Rally.",
@@ -165,8 +167,7 @@ function CreatorPage() {
     startsAt?: string | null;
     locationMode?: "specific" | "open";
     location?: string | null;
-    action?:
-      "save" | "publish" | "confirm" | "cancel";
+    action?: "save" | "publish" | "confirm" | "cancel";
   }) {
     setBusy(true);
     setError(null);
@@ -196,7 +197,7 @@ function CreatorPage() {
     return (
       <Shell>
         <h1 className="text-lg font-bold">
-          {error ? "Manage your Rally" : "This link isn’t valid"}
+          {error ? "Your Rally" : "This link isn’t valid"}
         </h1>
         <p
           role={error ? "alert" : undefined}
@@ -303,417 +304,438 @@ function CreatorPage() {
 
   return (
     <Shell>
-      <h1 className="text-lg font-bold">Manage your Rally</h1>
+      <h1 className="flex items-center gap-2 text-lg font-bold">
+        Your Rally <RallyFinish />
+      </h1>
       <p className="mb-4 mt-1 text-sm text-muted-foreground">
         {STATUS_LABEL[rally.status]} · {responses.length}{" "}
         {responses.length === 1 ? "response" : "responses"}
       </p>
-      <p className="mb-4 border border-border p-3 text-sm" aria-live="polite">
+      <p className="rally-next mb-3 text-sm" aria-live="polite">
         Next: {NEXT_ACTION_LABEL[rally.nextAction]}
       </p>
-      <RallyCard
-        rally={rally}
-        editing={editing}
-        onEdit={canEdit && !busy ? () => void toggleEdit() : undefined}
-      >
-        <div className="space-y-3">
-          {isDraft && (
+      <PlanCardLap>
+        <RallyCard
+          rally={rally}
+          editing={editing}
+          onEdit={canEdit && !busy ? () => void toggleEdit() : undefined}
+        >
+          <div className="space-y-3">
+            {isDraft && (
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">Plan</span>
+                <input
+                  value={activity}
+                  maxLength={200}
+                  onChange={(e) => setActivity(e.target.value)}
+                  className="w-full border border-border px-3 py-2 text-base"
+                />
+              </label>
+            )}
             <label className="block space-y-1">
-              <span className="text-sm font-medium">Plan</span>
+              <span className="text-sm font-medium">Time</span>
               <input
-                value={activity}
-                maxLength={200}
-                onChange={(e) => setActivity(e.target.value)}
+                type="datetime-local"
+                value={finalTime}
+                onChange={(e) => setFinalTime(e.target.value)}
                 className="w-full border border-border px-3 py-2 text-base"
               />
             </label>
-          )}
-          <label className="block space-y-1">
-            <span className="text-sm font-medium">Time</span>
-            <input
-              type="datetime-local"
-              value={finalTime}
-              onChange={(e) => setFinalTime(e.target.value)}
-              className="w-full border border-border px-3 py-2 text-base"
-            />
-          </label>
-          {isPoll && rally.candidates.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {rally.candidates.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() =>
-                    setFinalTime(toLocalInputValue(new Date(c.startsAt)))
-                  }
-                  className="border border-border px-2 py-1 text-xs"
-                >
-                  {formatDateTime(c.startsAt)}
-                </button>
-              ))}
+            {isPoll && rally.candidates.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {rally.candidates.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() =>
+                      setFinalTime(toLocalInputValue(new Date(c.startsAt)))
+                    }
+                    className="border border-border px-2 py-1 text-xs"
+                  >
+                    {formatDateTime(c.startsAt)}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="space-y-1">
+              <span className="text-sm font-medium">Location</span>
+              <PlaceInput
+                value={finalLocation}
+                onChange={setFinalLocation}
+                placeholder="Search a place or address"
+                ariaLabel="Location"
+              />
             </div>
-          )}
-          <div className="space-y-1">
-            <span className="text-sm font-medium">Location</span>
-            <PlaceInput
-              value={finalLocation}
-              onChange={setFinalLocation}
-              placeholder="Search a place or address"
-              ariaLabel="Location"
-            />
           </div>
-        </div>
-      </RallyCard>
+        </RallyCard>
+      </PlanCardLap>
 
-      <section className="mt-6 space-y-2">
-        {rally.publishedAt && (
-          <>
-            <h2 className="text-base font-semibold">Share with your friends</h2>
-            <input
-              readOnly
-              aria-label="Public Rally link"
-              value={inviteUrl}
-              className="w-full border border-border px-3 py-2 text-sm"
-            />
+      <div className="rally-management">
+        <p className="management-label">manage this rally</p>
+        <section className="mt-6 space-y-2">
+          {rally.publishedAt && (
+            <>
+              <h2 className="text-base font-semibold">
+                Share with your friends
+              </h2>
+              <input
+                readOnly
+                aria-label="Public Rally link"
+                value={inviteUrl}
+                className="w-full border border-border px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={share}
+                className="rally-copy-link w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background"
+              >
+                {copied === "invite" ? "Copied" : "Copy attendee link"}
+              </button>
+            </>
+          )}
+
+          <details className="text-sm">
+            <summary>Private management link</summary>
+            <a
+              href={creatorUrl}
+              className="mt-1 block break-all text-xs text-muted-foreground underline"
+            >
+              {creatorUrl}
+            </a>
             <button
               type="button"
-              onClick={share}
-              className="w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background"
+              onClick={() => copy(creatorUrl, "creator")}
+              className="mt-1 border border-border px-3 py-2 text-sm"
             >
-              {copied === "invite" ? "Copied" : "Copy attendee link"}
+              {copied === "creator" ? "Copied" : "Copy management link"}
             </button>
-          </>
-        )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Share this with your cohosts.
+            </p>
+          </details>
+        </section>
 
-        <details className="text-sm">
-          <summary>Private management link</summary>
-          <a
-            href={creatorUrl}
-            className="mt-1 block break-all text-xs text-muted-foreground underline"
-          >
-            {creatorUrl}
-          </a>
-          <button
-            type="button"
-            onClick={() => copy(creatorUrl, "creator")}
-            className="mt-1 border border-border px-3 py-2 text-sm"
-          >
-            {copied === "creator" ? "Copied" : "Copy management link"}
-          </button>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Keep this to yourself. Saved Rallies also require the organizer’s
-            account.
-          </p>
-        </details>
-      </section>
-
-      <section className="mt-6">
-        <h2 className="text-base font-semibold">
-          Responses ({responses.length})
-        </h2>
-        {responses.length === 0 ? (
-          <p className="mt-1 text-sm text-muted-foreground">
-            No responses yet.
-          </p>
-        ) : (
-          <ul className="mt-2 space-y-3">
-            {responses.map((r) => {
-              const time = responseTime(r);
-              const place = r.suggestions[0] ?? null;
-              return (
-                <li key={r.id} className="border border-border p-2 text-sm">
-                  <p className="font-medium">{r.name}</p>
-                  <p>{r.consensus ? CONSENSUS_LABEL[r.consensus] : "—"}</p>
-                  {isPoll && (
-                    <ul className="mt-1">
-                      {rally.candidates.map((c) => (
-                        <li key={c.id}>
-                          {r.available.includes(c.id) ? "✓" : "✕"}{" "}
-                          {formatDateTime(c.startsAt)}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {r.note && <p className="mt-1">Note: {r.note}</p>}
-                  {r.suggestions.length > 0 && (
-                    <p className="mt-1">
-                      Location needs: {r.suggestions.join(", ")}
-                    </p>
-                  )}
-                  {(r.timeSuggestions?.length ?? 0) > 0 && (
-                    <div className="mt-1">
-                      <p className="font-medium">Suggested new times</p>
-                      <ul className="mt-1 space-y-1">
-                        {(r.timeSuggestions ?? []).map((t) => (
-                          <li
-                            key={t}
-                            className="flex items-center justify-between gap-2"
-                          >
-                            <span>{formatDateTime(t)}</span>
-                            {canEdit && (
-                              <button
-                                type="button"
-                                disabled={busy || editing}
-                                onClick={() => {
-                                  setFinalTime(toLocalInputValue(new Date(t)));
-                                  void patch({
-                                    finalTime: new Date(t).toISOString(),
-                                  });
-                                }}
-                                className="border border-border px-2 py-1 text-xs disabled:opacity-50"
-                              >
-                                Use this time
-                              </button>
-                            )}
+        <section className="mt-6">
+          <h2 className="text-base font-semibold">
+            Responses ({responses.length})
+          </h2>
+          {responses.length === 0 ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              No responses yet.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-3">
+              {responses.map((r) => {
+                const time = responseTime(r);
+                const place = r.suggestions[0] ?? null;
+                return (
+                  <li key={r.id} className="border border-border p-2 text-sm">
+                    <p className="font-medium">{r.name}</p>
+                    <p>{r.consensus ? CONSENSUS_LABEL[r.consensus] : "—"}</p>
+                    {isPoll && (
+                      <ul className="mt-1">
+                        {rally.candidates.map((c) => (
+                          <li key={c.id}>
+                            {r.available.includes(c.id) ? "✓" : "✕"}{" "}
+                            {formatDateTime(c.startsAt)}
                           </li>
                         ))}
                       </ul>
-                    </div>
-                  )}
-                  {canEdit && (time || place) && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {time && place && (
-                        <button
-                          type="button"
-                          disabled={busy || editing}
-                          onClick={() =>
-                            void applyFromResponse(r, {
-                              time: true,
-                              place: true,
-                            })
-                          }
-                          className="border border-border px-2 py-1 text-xs disabled:opacity-50"
-                        >
-                          Use as plan
-                        </button>
-                      )}
-                      {time && (
-                        <button
-                          type="button"
-                          disabled={busy || editing}
-                          onClick={() =>
-                            void applyFromResponse(r, { time: true })
-                          }
-                          className="border border-border px-2 py-1 text-xs disabled:opacity-50"
-                        >
-                          Use this time
-                        </button>
-                      )}
-                      {place && (
-                        <button
-                          type="button"
-                          disabled={busy || editing}
-                          onClick={() =>
-                            void applyFromResponse(r, { place: true })
-                          }
-                          className="border border-border px-2 py-1 text-xs disabled:opacity-50"
-                        >
-                          Use this place
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      {isPoll && (
-        <section className="mt-6">
-          <h2 className="text-base font-semibold">Leading time</h2>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm">
-              {leader
-                ? `${formatDateTime(leader.candidate.startsAt)} — ${leader.count} available`
-                : "No votes yet."}
-            </p>
-            {leader && canEdit && !isDraft && (
-              <button
-                type="button"
-                disabled={busy || editing}
-                onClick={() => {
-                  const iso = new Date(leader.candidate.startsAt).toISOString();
-                  setFinalTime(
-                    toLocalInputValue(new Date(leader.candidate.startsAt)),
-                  );
-                  void patch({ finalTime: iso });
-                }}
-                className="border border-border px-2 py-1 text-xs"
-              >
-                Use this time
-              </button>
-            )}
-          </div>
-        </section>
-      )}
-
-      {openLocation && (
-        <section className="mt-6">
-          <h2 className="text-base font-semibold">Location needs</h2>
-          {suggestions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">None yet.</p>
-          ) : (
-            <ul className="mt-1 space-y-1 text-sm">
-              {suggestions.map((s, i) => (
-                <li key={i} className="flex items-center justify-between gap-2">
-                  <span>
-                    {s.text}{" "}
-                    <span className="text-muted-foreground">({s.name})</span>
-                  </span>
-                  {canEdit && (
-                    <button
-                      type="button"
-                      disabled={busy || editing}
-                      onClick={() => {
-                        setFinalLocation(s.text);
-                        void patch({ finalLocation: s.text });
-                      }}
-                      className="border border-border px-2 py-1 text-xs"
-                    >
-                      Use
-                    </button>
-                  )}
-                </li>
-              ))}
+                    )}
+                    {r.note && <p className="mt-1">Note: {r.note}</p>}
+                    {r.suggestions.length > 0 && (
+                      <p className="mt-1">
+                        Location needs: {r.suggestions.join(", ")}
+                      </p>
+                    )}
+                    {(r.timeSuggestions?.length ?? 0) > 0 && (
+                      <div className="mt-1">
+                        <p className="font-medium">Suggested new times</p>
+                        <ul className="mt-1 space-y-1">
+                          {(r.timeSuggestions ?? []).map((t) => (
+                            <li
+                              key={t}
+                              className="flex items-center justify-between gap-2"
+                            >
+                              <span>{formatDateTime(t)}</span>
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  disabled={busy || editing}
+                                  onClick={() => {
+                                    setFinalTime(
+                                      toLocalInputValue(new Date(t)),
+                                    );
+                                    void patch({
+                                      finalTime: new Date(t).toISOString(),
+                                    });
+                                  }}
+                                  className="border border-border px-2 py-1 text-xs disabled:opacity-50"
+                                >
+                                  Use this time
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {canEdit && (time || place) && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {time && place && (
+                          <button
+                            type="button"
+                            disabled={busy || editing}
+                            onClick={() =>
+                              void applyFromResponse(r, {
+                                time: true,
+                                place: true,
+                              })
+                            }
+                            className="border border-border px-2 py-1 text-xs disabled:opacity-50"
+                          >
+                            Use as plan
+                          </button>
+                        )}
+                        {time && (
+                          <button
+                            type="button"
+                            disabled={busy || editing}
+                            onClick={() =>
+                              void applyFromResponse(r, { time: true })
+                            }
+                            className="border border-border px-2 py-1 text-xs disabled:opacity-50"
+                          >
+                            Use this time
+                          </button>
+                        )}
+                        {place && (
+                          <button
+                            type="button"
+                            disabled={busy || editing}
+                            onClick={() =>
+                              void applyFromResponse(r, { place: true })
+                            }
+                            className="border border-border px-2 py-1 text-xs disabled:opacity-50"
+                          >
+                            Use this place
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
-      )}
 
-      <section className="mt-6 space-y-2">
-        {error && (
-          <p role="alert" className="text-sm font-medium">
-            {error}
-          </p>
+        {isPoll && (
+          <section className="mt-6">
+            <h2 className="text-base font-semibold">Leading time</h2>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm">
+                {leader
+                  ? `${formatDateTime(leader.candidate.startsAt)} — ${leader.count} available`
+                  : "No votes yet."}
+              </p>
+              {leader && canEdit && !isDraft && (
+                <button
+                  type="button"
+                  disabled={busy || editing}
+                  onClick={() => {
+                    const iso = new Date(
+                      leader.candidate.startsAt,
+                    ).toISOString();
+                    setFinalTime(
+                      toLocalInputValue(new Date(leader.candidate.startsAt)),
+                    );
+                    void patch({ finalTime: iso });
+                  }}
+                  className="border border-border px-2 py-1 text-xs"
+                >
+                  Use this time
+                </button>
+              )}
+            </div>
+          </section>
         )}
-        {isDraft && (
-          <>
-            <p className="text-sm text-muted-foreground">
-              This draft is private until you publish it.
+
+        {openLocation && suggestions.length > 0 && (
+          <section className="mt-6">
+            <h2 className="text-base font-semibold">Location needs</h2>
+            {suggestions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">None yet.</p>
+            ) : (
+              <ul className="mt-1 space-y-1 text-sm">
+                {suggestions.map((s, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span>
+                      {s.text}{" "}
+                      <span className="text-muted-foreground">({s.name})</span>
+                    </span>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        disabled={busy || editing}
+                        onClick={() => {
+                          setFinalLocation(s.text);
+                          void patch({ finalLocation: s.text });
+                        }}
+                        className="border border-border px-2 py-1 text-xs"
+                      >
+                        Use
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        <section className="mt-6 space-y-2">
+          {error && (
+            <p role="alert" className="text-sm font-medium">
+              {error}
             </p>
+          )}
+          {isDraft && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                This draft is private until you publish it.
+              </p>
+              <button
+                type="button"
+                disabled={busy || editing}
+                onClick={() => void patch({ action: "publish" })}
+                className="w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background disabled:opacity-50"
+              >
+                Publish Rally
+              </button>
+            </>
+          )}
+          {rally.status === "open" && (
             <button
               type="button"
-              disabled={busy || editing}
-              onClick={() => void patch({ action: "publish" })}
+              disabled={busy || editing || !finalTime || !finalLocation.trim()}
+              onClick={() =>
+                void patch({
+                  finalTime: finalTime
+                    ? new Date(finalTime).toISOString()
+                    : null,
+                  finalLocation: finalLocation.trim() || null,
+                  action: "confirm",
+                })
+              }
               className="w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background disabled:opacity-50"
             >
-              Publish Rally
+              Confirm plan
             </button>
-          </>
-        )}
-        {rally.status === "open" && (
-          <button
-            type="button"
-            disabled={busy || editing || !finalTime || !finalLocation.trim()}
-            onClick={() =>
-              void patch({
-                finalTime: finalTime ? new Date(finalTime).toISOString() : null,
-                finalLocation: finalLocation.trim() || null,
-                action: "confirm",
-              })
-            }
-            className="w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background disabled:opacity-50"
-          >
-            Confirm plan
-          </button>
-        )}
-        {editing ? (
-          <p className="text-xs text-muted-foreground">
-            Choose “Done editing” to save your changes first.
-          </p>
-        ) : (
-          rally.status === "open" &&
-          (!finalTime || !finalLocation.trim()) && (
+          )}
+          {editing ? (
             <p className="text-xs text-muted-foreground">
-              Choose the final time and place before confirming.
+              Choose “Done editing” to save your changes first.
             </p>
-          )
-        )}
+          ) : (
+            rally.status === "open" &&
+            (!finalTime || !finalLocation.trim()) && (
+              <p className="text-xs text-muted-foreground">
+                Choose the final time and place before confirming.
+              </p>
+            )
+          )}
 
-        {rally.status === "confirmed" && (
-          <button
-            type="button"
-            onClick={() => downloadIcs(rally, inviteUrl || undefined)}
-            className="w-full border border-border px-4 py-3 text-sm"
-          >
-            Add to calendar
-          </button>
-        )}
-        {rally.finalMessage && (
-          <div className="space-y-2 border border-border p-3">
-            <p className="text-sm font-semibold">Final plan to share</p>
-            <p className="whitespace-pre-line break-words text-sm">
-              {rally.finalMessage}
-            </p>
+          {rally.status === "confirmed" && (
             <button
               type="button"
-              onClick={() => void copy(rally.finalMessage!, "final")}
-              className="w-full border border-border px-3 py-2 text-sm"
+              onClick={() => downloadIcs(rally, inviteUrl || undefined)}
+              className="w-full border border-border px-4 py-3 text-sm"
             >
-              {copied === "final" ? "Copied" : "Copy final message"}
+              Add to calendar
             </button>
-          </div>
-        )}
-        {(rally.status === "draft" ||
-          rally.status === "open" ||
-          rally.status === "confirmed") && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              if (
-                window.confirm(
-                  "Cancel this Rally? Friends will see that the plan is cancelled.",
-                )
-              ) {
-                setEditing(false);
-                void patch({ action: "cancel" });
-              }
-            }}
-            className="w-full border border-border px-4 py-3 text-sm disabled:opacity-50"
-          >
-            Cancel Rally
-          </button>
-        )}
-      </section>
+          )}
+          {rally.finalMessage && (
+            <div className="space-y-2 border border-border p-3">
+              <p className="text-sm font-semibold">Final plan to share</p>
+              <p className="whitespace-pre-line break-words text-sm">
+                {rally.finalMessage}
+              </p>
+              <button
+                type="button"
+                onClick={() => void copy(rally.finalMessage!, "final")}
+                className="w-full border border-border px-3 py-2 text-sm"
+              >
+                {copied === "final" ? "Copied" : "Copy final message"}
+              </button>
+            </div>
+          )}
+          {(rally.status === "draft" ||
+            rally.status === "open" ||
+            rally.status === "confirmed") && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Cancel this Rally? Friends will see that the plan is cancelled.",
+                  )
+                ) {
+                  setEditing(false);
+                  void patch({ action: "cancel" });
+                }
+              }}
+              className="rally-secondary border border-border px-3 py-2 text-sm disabled:opacity-50"
+            >
+              Cancel Rally
+            </button>
+          )}
+        </section>
 
-      <SaveRallySection creatorToken={creatorToken} />
-      <button
-        type="button"
-        disabled={busy}
-        onClick={async () => {
-          if (
-            !window.confirm(
-              "Permanently delete this Rally and all its responses? Its links will stop working. This cannot be undone.",
+        <SaveRallySection creatorToken={creatorToken} />
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            if (
+              !window.confirm(
+                "Permanently delete this Rally and all its responses? Its links will stop working. This cannot be undone.",
+              )
             )
-          )
-            return;
-          setBusy(true);
-          setError(null);
-          try {
-            await remove({ data: { creatorToken } });
-            ++requestNumber.current;
-            await navigate({ to: signedIn ? "/my-rallies" : "/" });
-          } catch (err) {
-            setError(
-              err instanceof Error
-                ? err.message
-                : "Could not delete this Rally.",
-            );
-          } finally {
-            setBusy(false);
-          }
-        }}
-        className="mt-6 w-full border border-border px-4 py-3 text-sm disabled:opacity-50"
-      >
-        Delete Rally
-      </button>
+              return;
+            setBusy(true);
+            setError(null);
+            try {
+              await remove({ data: { creatorToken } });
+              ++requestNumber.current;
+              await navigate({ to: signedIn ? "/my-rallies" : "/" });
+            } catch (err) {
+              setError(
+                err instanceof Error
+                  ? err.message
+                  : "Could not delete this Rally.",
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="rally-delete mt-4 text-xs text-muted-foreground underline underline-offset-4 disabled:opacity-50"
+        >
+          Delete Rally
+        </button>
+      </div>
     </Shell>
   );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
-  return <main className="mx-auto max-w-md px-4 py-6">{children}</main>;
+  return (
+    <main className="rally-page rally-manage mx-auto max-w-md px-4 py-6">
+      {children}
+    </main>
+  );
 }

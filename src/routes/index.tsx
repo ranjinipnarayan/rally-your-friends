@@ -3,6 +3,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 
+import { RallyFinish } from "@/components/RallyFinish";
+import { RallyJourney } from "@/components/RallyJourney";
 import { PlaceInput } from "@/components/PlaceInput";
 import { createRallySchema } from "@/lib/rally-schema";
 import { createRally } from "@/lib/rally.functions";
@@ -46,6 +48,7 @@ function CreateRallyPage() {
   const navigate = useNavigate();
   const create = useServerFn(createRally);
 
+  const [activeStep, setActiveStep] = useState(0);
   const [activity, setActivity] = useState("");
   const [timeMode, setTimeMode] = useState<"specific" | "poll">("specific");
   const [startsAt, setStartsAt] = useState(() => {
@@ -105,17 +108,24 @@ function CreateRallyPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-4 py-6">
-      <h1 className="text-xl font-bold">Rally</h1>
+    <main className="rally-page rally-create mx-auto max-w-md px-4 py-6">
+      <h1 className="flex items-center gap-2 text-xl font-bold">
+        Rally
+        <RallyFinish />
+      </h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Make a plan. Get your people together.
+      </p>
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
           void createPlan();
         }}
-        className="mt-6 space-y-8"
+        className="rally-create-form mt-5 space-y-6"
       >
-        <fieldset className="space-y-2">
+        <RallyJourney step={activeStep} />
+        <fieldset onFocus={() => setActiveStep(0)} className="space-y-2">
           <legend className="text-base font-semibold">
             1. What are you planning?
           </legend>
@@ -126,8 +136,8 @@ function CreateRallyPage() {
             placeholder="Dinner, coffee…"
             className="w-full border border-border px-3 py-2 text-base"
           />
-          <div className="flex flex-wrap gap-2">
-            {ACTIVITY_SUGGESTIONS.map((s) => (
+          <div className="rally-suggestions flex gap-1.5">
+            {ACTIVITY_SUGGESTIONS.filter((s) => s !== "Coffee").map((s) => (
               <button
                 key={s}
                 type="button"
@@ -151,7 +161,7 @@ function CreateRallyPage() {
           </div>
         </fieldset>
 
-        <fieldset className="space-y-3">
+        <fieldset onFocus={() => setActiveStep(1)} className="space-y-3">
           <legend className="text-base font-semibold">2. When?</legend>
           <div className="flex gap-4 text-sm">
             <label className="flex items-center gap-2">
@@ -270,7 +280,7 @@ function CreateRallyPage() {
           )}
         </fieldset>
 
-        <fieldset className="space-y-3">
+        <fieldset onFocus={() => setActiveStep(2)} className="space-y-3">
           <legend className="text-base font-semibold">3. Where?</legend>
           <div className="flex gap-4 text-sm">
             <label className="flex items-center gap-2">
@@ -308,7 +318,7 @@ function CreateRallyPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background disabled:opacity-50"
+            className="rally-submit w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background disabled:opacity-50"
           >
             {busy ? "Saving…" : "Create Rally"}
           </button>
