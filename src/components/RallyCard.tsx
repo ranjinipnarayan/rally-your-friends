@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { TimeStamp } from "@/components/TimeStamp";
-import { currentTimeZone, type RallyView } from "@/lib/rally-shared";
+import type { RallyView } from "@/lib/rally-shared";
 
 export function RallyCard({
   rally,
@@ -63,12 +63,6 @@ export function RallyCard({
               </a>
             )}
           </dd>
-        </div>
-        <div>
-          <dt className="text-xs tracking-wide text-muted-foreground">
-            Time zone
-          </dt>
-          <dd>{currentTimeZone()}</dd>
         </div>
         {rally.responsesOpen && (
           <div>

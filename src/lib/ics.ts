@@ -1,3 +1,4 @@
+import type { CalendarPlace } from "@/lib/places.server";
 import type { RallyView } from "@/lib/rally-shared";
 
 function pad(n: number) {
@@ -16,10 +17,32 @@ function escapeText(value: string) {
     .replace(/\\/g, "\\\\")
     .replace(/;/g, "\\;")
     .replace(/,/g, "\\,")
-    .replace(/\n/g, "\\n");
+    .replace(/\r\n|\r|\n/g, "\\n");
 }
 
-export function buildIcs(rally: RallyView, url?: string): string | null {
+// iCalendar content lines are limited to 75 UTF-8 octets, including the
+// continuation space. Fold between characters so Unicode remains intact.
+function foldLine(line: string) {
+  const encoder = new TextEncoder();
+  let result = "";
+  let bytes = 0;
+  for (const character of line) {
+    const size = encoder.encode(character).length;
+    if (bytes + size > 75) {
+      result += "\r\n ";
+      bytes = 1;
+    }
+    result += character;
+    bytes += size;
+  }
+  return result;
+}
+
+export function buildIcs(
+  rally: RallyView,
+  url?: string,
+  place?: CalendarPlace,
+): string | null {
   const start = rally.finalTime ?? rally.startsAt;
   if (!start) return null;
   const startDate = new Date(start);
@@ -27,6 +50,24 @@ export function buildIcs(rally: RallyView, url?: string): string | null {
   const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
   const location = rally.finalLocation ?? rally.location ?? "";
 
+  const mapsUrl = place
+    ? `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`
+    : location
+      ? (rally.mapsUrl ??
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`)
+      : null;
+  const description = [
+    mapsUrl ? `Open in maps: ${mapsUrl}` : null,
+    url ? `Rally plan: ${url}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const venue = place ? `${location}\n${place.address}` : location;
+  const title = location
+    .replace(/\^/g, "^^")
+    .replace(/\r\n|\r|\n/g, "^n")
+    .replace(/"/g, "^'");
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -40,18 +81,26 @@ export function buildIcs(rally: RallyView, url?: string): string | null {
     `DTEND:${toIcsUtc(endDate)}`,
     `SUMMARY:${escapeText(rally.activity)}`,
     "CONTACT:help@rally-your-friends.com",
-    location ? `LOCATION:${escapeText(location)}` : null,
-    url ? `URL:${escapeText(url)}` : null,
-    url ? `DESCRIPTION:${escapeText(`Rally plan: ${url}`)}` : null,
+    location ? `LOCATION;ALTREP="${mapsUrl}":${escapeText(venue)}` : null,
+    place ? `GEO:${place.latitude};${place.longitude}` : null,
+    place
+      ? `X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-APPLE-RADIUS=0;X-TITLE="${title}":geo:${place.latitude},${place.longitude}`
+      : null,
+    url ? `URL:${url.replace(/[\r\n]/g, "")}` : null,
+    description ? `DESCRIPTION:${escapeText(description)}` : null,
     "END:VEVENT",
     "END:VCALENDAR",
   ].filter(Boolean) as string[];
 
-  return lines.join("\r\n");
+  return lines.map(foldLine).join("\r\n") + "\r\n";
 }
 
-export function downloadIcs(rally: RallyView, url?: string) {
-  const ics = buildIcs(rally, url);
+export function downloadIcs(
+  rally: RallyView,
+  url?: string,
+  place?: CalendarPlace,
+) {
+  const ics = buildIcs(rally, url, place);
   if (!ics) return;
   const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
   const href = URL.createObjectURL(blob);

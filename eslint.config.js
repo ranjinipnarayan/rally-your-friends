@@ -47,7 +47,24 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "Property[key.name='action'][value.value='cancel'], Property[key.value='action'][value.value='cancel']",
+          message:
+            "Rally cancellation is deprecated. Use the delete Rally flow instead.",
+        },
+      ],
     },
   },
   // Formatting is handled by npm run format; lint checks code correctness.

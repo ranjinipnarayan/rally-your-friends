@@ -3,10 +3,13 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
+import { PlaceInput } from "@/components/PlaceInput";
 import { TimeStamp } from "@/components/TimeStamp";
+import { RallyFinish } from "@/components/RallyFinish";
+import { PlanCardLap } from "@/components/PlanCardLap";
 import { RallyCard } from "@/components/RallyCard";
 import { DeletedRally } from "@/components/DeletedRally";
-import { downloadIcs } from "@/lib/ics";
+import { CalendarButton } from "@/components/CalendarButton";
 import {
   getInviteView,
   getMyResponse,
@@ -77,24 +80,6 @@ export const Route = createFileRoute("/r/$inviteToken")({
   ),
 });
 
-const NOTE_HINTS = [
-  "Vegetarian",
-  "No nuts",
-  "Need to leave early",
-  "Can't do late nights",
-  "Bringing a +1",
-  "Prefer somewhere close by",
-];
-
-const LOCATION_HINTS = [
-  "Needs to be near a subway",
-  "Somewhere in Soho",
-  "Prefer the UWS",
-  "Walking distance from home",
-  "Outdoor seating",
-  "Needs to be quiet",
-];
-
 function storageKey(token: string) {
   return `rally:${token}`;
 }
@@ -124,6 +109,8 @@ function RecipientResponse() {
   const [editing, setEditing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   useEffect(() => {
     const refresh = () => {
@@ -265,318 +252,347 @@ function RecipientResponse() {
 
   return (
     <Shell>
-      <h1 className="text-xl font-bold">{rally.activity}</h1>
+      <h1 className="flex items-center gap-2 text-xl font-bold">
+        {rally.status === "cancelled" || rally.status === "completed"
+          ? "rally update"
+          : "you’re invited"}{" "}
+        <RallyFinish />
+      </h1>
       <p className="mb-4 mt-1 text-sm text-muted-foreground">
-        {STATUS_LABEL[rally.status]}
+        {rally.status === "open"
+          ? closed
+            ? "rsvps are closed"
+            : "waiting for rsvps"
+          : rally.status === "confirmed"
+            ? "the plan is confirmed"
+            : STATUS_LABEL[rally.status]}
       </p>
-      <RallyCard rally={rally} />
-
-      {rally.status === "confirmed" && (rally.finalTime ?? rally.startsAt) && (
-        <button
-          type="button"
-          onClick={() => downloadIcs(rally, rally.publicUrl)}
-          className="mt-4 w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background"
-        >
-          Add to calendar
-        </button>
-      )}
-
-      {closed && (
-        <p className="mt-4 border border-border p-3 text-sm">
-          {rally.status === "confirmed"
-            ? "The plan is confirmed. See the final time and place above."
-            : rally.status === "cancelled"
-              ? "The organizer cancelled this Rally."
-              : rally.status === "completed"
-                ? "This Rally has ended."
-                : "The response window has closed. The organizer can still finalize the plan."}
-        </p>
-      )}
-
-      {!closed &&
-        (saved && !editing ? (
-          <div className="mt-6 space-y-3">
-            <p className="text-sm font-semibold">Response saved</p>
-            <ul className="text-sm">
-              <li>Name: {name}</li>
-              <li>
-                Answer:{" "}
-                {isPoll
-                  ? noneWork
-                    ? CONSENSUS_LABEL.none_work
-                    : available
-                        .map((id) =>
-                          formatFullDateTime(
-                            rally.candidates.find((c) => c.id === id)?.startsAt,
-                          ),
-                        )
-                        .join(", ")
-                  : consensus
-                    ? CONSENSUS_LABEL[consensus]
-                    : "—"}
-              </li>
-              {openLocation && <li>Location needs: {suggestion || "—"}</li>}
-              {note.trim() && <li>Note: {note.trim()}</li>}
-              {wantsNewTimes && proposedIso.length > 0 && (
-                <li>
-                  Times you suggested:{" "}
-                  {proposedIso.map((t) => formatFullDateTime(t)).join(", ")}
-                </li>
+      <PlanCardLap>
+        <RallyCard rally={rally} />
+      </PlanCardLap>
+      <div className="rally-response-panel">
+        {rally.status === "confirmed" ? (
+          <>
+            <h2 className="text-sm font-semibold">take the plan with you</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              save the date or pass the invite along
+            </p>
+            <div className="rally-attendee-actions">
+              {(rally.finalTime ?? rally.startsAt) && (
+                <CalendarButton
+                  rally={rally}
+                  url={rally.publicUrl}
+                  className="border border-border bg-foreground px-3 py-2 text-sm font-medium text-background"
+                />
               )}
-            </ul>
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="border border-border px-3 py-2 text-sm"
-            >
-              Edit response
-            </button>
-          </div>
+              <button
+                type="button"
+                className="border border-border px-3 py-2 text-sm"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(rally.publicUrl);
+                    setInviteCopied(true);
+                    setCopyFailed(false);
+                  } catch {
+                    setCopyFailed(true);
+                  }
+                }}
+              >
+                {inviteCopied ? "invite copied" : "copy invite link"}
+              </button>
+            </div>
+            <span role="status" className="sr-only">
+              {inviteCopied ? "invite link copied to clipboard" : ""}
+            </span>
+            {copyFailed && (
+              <label className="mt-3 block text-xs text-muted-foreground">
+                copy this link to share
+                <input
+                  readOnly
+                  value={rally.publicUrl}
+                  onFocus={(event) => event.target.select()}
+                  className="mt-1 w-full border border-border px-3 py-2 text-sm"
+                />
+              </label>
+            )}
+          </>
         ) : (
-          <form onSubmit={onSubmit} className="mt-6 space-y-5">
-            <label className="block space-y-1">
-              <span className="text-sm font-medium">Your name</span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full border border-border px-3 py-2 text-base"
-                required
-              />
-            </label>
+          <>
+            <p className="management-label">
+              {closed ? "plan updates" : "your response"}
+            </p>
+            {closed && (
+              <p className="mt-3 text-sm">
+                {rally.status === "cancelled"
+                  ? "The organizer cancelled this Rally."
+                  : rally.status === "completed"
+                    ? "This Rally has ended."
+                    : "The response window has closed. The organizer can still finalize the plan."}
+              </p>
+            )}
+          </>
+        )}
 
-            {isPoll ? (
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-medium">
-                  Which times work?
-                </legend>
-                {rally.candidates.map((c) => (
-                  <label key={c.id} className="flex items-center gap-2 text-sm">
+        {!closed &&
+          (saved && !editing ? (
+            <div className="mt-3 space-y-3">
+              <p className="text-sm font-semibold">Response saved</p>
+              <ul className="text-sm">
+                <li>Name: {name}</li>
+                <li>
+                  Answer:{" "}
+                  {isPoll
+                    ? noneWork
+                      ? CONSENSUS_LABEL.none_work
+                      : available
+                          .map((id) =>
+                            formatFullDateTime(
+                              rally.candidates.find((c) => c.id === id)
+                                ?.startsAt,
+                            ),
+                          )
+                          .join(", ")
+                    : consensus
+                      ? CONSENSUS_LABEL[consensus]
+                      : "—"}
+                </li>
+                {openLocation && (
+                  <li>Location suggestion: {suggestion || "—"}</li>
+                )}
+                {note.trim() && <li>Note: {note.trim()}</li>}
+                {wantsNewTimes && proposedIso.length > 0 && (
+                  <li>
+                    Times you suggested:{" "}
+                    {proposedIso.map((t) => formatFullDateTime(t)).join(", ")}
+                  </li>
+                )}
+              </ul>
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="border border-border px-3 py-2 text-sm"
+              >
+                Edit response
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={onSubmit} className="mt-3 space-y-4">
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">Your name</span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full border border-border px-3 py-2 text-base"
+                  required
+                />
+              </label>
+
+              {isPoll ? (
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">
+                    Which times work?
+                  </legend>
+                  {rally.candidates.map((c) => (
+                    <label
+                      key={c.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!noneWork && available.includes(c.id)}
+                        disabled={noneWork}
+                        onChange={(e) =>
+                          setAvailable((prev) =>
+                            e.target.checked
+                              ? [...prev, c.id]
+                              : prev.filter((id) => id !== c.id),
+                          )
+                        }
+                      />
+                      <TimeStamp value={c.startsAt} />
+                    </label>
+                  ))}
+                  <label className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
-                      checked={!noneWork && available.includes(c.id)}
-                      disabled={noneWork}
-                      onChange={(e) =>
-                        setAvailable((prev) =>
-                          e.target.checked
-                            ? [...prev, c.id]
-                            : prev.filter((id) => id !== c.id),
-                        )
-                      }
+                      checked={noneWork}
+                      onChange={(e) => {
+                        setNoneWork(e.target.checked);
+                        if (e.target.checked) setAvailable([]);
+                      }}
                     />
-                    <TimeStamp value={c.startsAt} />
+                    None of these work
                   </label>
-                ))}
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={noneWork}
-                    onChange={(e) => {
-                      setNoneWork(e.target.checked);
-                      if (e.target.checked) setAvailable([]);
-                    }}
-                  />
-                  None of these work
-                </label>
-              </fieldset>
-            ) : (
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-medium">Does this work?</legend>
-                {(["yes", "no", "another_day"] as const).map((value) => (
-                  <label
-                    key={value}
-                    className="flex items-center gap-2 text-sm"
-                  >
-                    <input
-                      type="radio"
-                      name="consensus"
-                      checked={consensus === value}
-                      onChange={() => setConsensus(value)}
-                    />
-                    {CONSENSUS_LABEL[value]}
-                  </label>
-                ))}
-              </fieldset>
-            )}
-
-            {wantsNewTimes && (
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-medium">
-                  Suggest up to three times that do work
-                </legend>
-                {[0, 1, 2].map((i) => (
-                  <input
-                    key={i}
-                    type="datetime-local"
-                    aria-label={`Suggested time ${i + 1}`}
-                    value={timeIdeas[i] ?? ""}
-                    onChange={(e) =>
-                      setTimeIdeas((prev) =>
-                        prev.map((v, idx) => (idx === i ? e.target.value : v)),
-                      )
-                    }
-                    className="w-full border border-border px-3 py-2 text-base"
-                  />
-                ))}
-                <p className="text-xs text-muted-foreground">
-                  Optional — leave blank to skip.
-                </p>
-              </fieldset>
-            )}
-
-            {openLocation && (
-              <div className="space-y-2">
-                <label className="block space-y-1">
-                  <span className="text-sm font-medium">
-                    Any location needs? (optional)
-                  </span>
-                  <textarea
-                    value={suggestion}
-                    onChange={(e) =>
-                      setSuggestion(e.target.value.slice(0, 200))
-                    }
-                    rows={3}
-                    maxLength={200}
-                    aria-label="Any location needs? (optional)"
-                    placeholder="e.g. need to be in Soho by 4, ideally the UWS, want to try a new wine bar called Demo"
-                    className="w-full border border-border px-3 py-2 text-base"
-                  />
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {LOCATION_HINTS.map((hint) => (
-                    <button
-                      key={hint}
-                      type="button"
-                      onClick={() =>
-                        setSuggestion((prev) =>
-                          (prev.trim()
-                            ? `${prev.trim()}, ${hint}`
-                            : hint
-                          ).slice(0, 200),
-                        )
-                      }
-                      className="rounded-full border border-border px-3 py-1 text-xs"
+                </fieldset>
+              ) : (
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">
+                    <span lang="fr">répondez s’il vous plaît</span>
+                    <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                      rsvp, for you plebs
+                    </span>
+                  </legend>
+                  {(["yes", "no", "another_day"] as const).map((value) => (
+                    <label
+                      key={value}
+                      className="flex items-center gap-2 text-sm"
                     >
-                      {hint}
-                    </button>
+                      <input
+                        type="radio"
+                        name="consensus"
+                        checked={consensus === value}
+                        onChange={() => setConsensus(value)}
+                      />
+                      {CONSENSUS_LABEL[value]}
+                    </label>
                   ))}
-                </div>
-              </div>
-            )}
+                </fieldset>
+              )}
 
-            <div className="space-y-2">
+              {wantsNewTimes && (
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">
+                    Suggest up to three times that do work
+                  </legend>
+                  {[0, 1, 2].map((i) => (
+                    <input
+                      key={i}
+                      type="datetime-local"
+                      aria-label={`Suggested time ${i + 1}`}
+                      value={timeIdeas[i] ?? ""}
+                      onChange={(e) =>
+                        setTimeIdeas((prev) =>
+                          prev.map((v, idx) =>
+                            idx === i ? e.target.value : v,
+                          ),
+                        )
+                      }
+                      className="w-full border border-border px-3 py-2 text-base"
+                    />
+                  ))}
+                  <p className="text-xs text-muted-foreground">
+                    leave blank to skip
+                  </p>
+                </fieldset>
+              )}
+
               <label className="block space-y-1">
                 <span className="text-sm font-medium">
-                  Anything we should know? (optional)
+                  any notes (optional)
                 </span>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value.slice(0, 300))}
-                  rows={3}
+                  rows={2}
                   maxLength={300}
-                  placeholder="e.g. I'm vegetarian, and I have to leave by 9"
+                  placeholder="dietary needs, timing, or anything else"
                   className="w-full border border-border px-3 py-2 text-base"
                 />
               </label>
-              <div className="flex flex-wrap gap-2">
-                {NOTE_HINTS.map((hint) => (
-                  <button
-                    key={hint}
-                    type="button"
-                    onClick={() =>
-                      setNote((prev) =>
-                        (prev.trim() ? `${prev.trim()}, ${hint}` : hint).slice(
-                          0,
-                          300,
-                        ),
-                      )
-                    }
-                    className="rounded-full border border-border px-3 py-1 text-xs"
+              {openLocation && (
+                <div className="space-y-1">
+                  <label
+                    htmlFor="attendee-location"
+                    className="text-sm font-medium"
                   >
-                    {hint}
-                  </button>
-                ))}
-              </div>
-            </div>
+                    location suggestion (optional)
+                  </label>
+                  <PlaceInput
+                    id="attendee-location"
+                    value={suggestion}
+                    onChange={(value) => setSuggestion(value.slice(0, 200))}
+                    ariaLabel="location suggestion (optional)"
+                    placeholder="search a place or address"
+                  />
+                </div>
+              )}
 
-            <section
-              aria-label="Review your response"
-              className="border border-border p-3"
-            >
-              <h2 className="text-sm font-semibold">Review your response</h2>
-              <dl className="mt-2 space-y-1 text-sm">
-                <div>
-                  <dt className="inline font-medium">Name: </dt>
-                  <dd className="inline">{name.trim() || "—"}</dd>
-                </div>
-                <div>
-                  <dt className="inline font-medium">Availability: </dt>
-                  <dd className="inline">
-                    {isPoll
-                      ? noneWork
-                        ? CONSENSUS_LABEL.none_work
-                        : available.length > 0
-                          ? rally.candidates
-                              .filter((c) => available.includes(c.id))
-                              .map((c) => formatFullDateTime(c.startsAt))
-                              .join("; ")
-                          : "Nothing selected yet"
-                      : consensus
-                        ? CONSENSUS_LABEL[consensus]
-                        : "Nothing selected yet"}
-                  </dd>
-                </div>
-                {wantsNewTimes && (
+              <section
+                aria-label="Review your response"
+                className="border border-border p-3"
+              >
+                <h2 className="text-sm font-semibold">Review your response</h2>
+                <dl className="mt-2 space-y-1 text-sm">
                   <div>
-                    <dt className="inline font-medium">Times you suggest: </dt>
+                    <dt className="inline font-medium">Name: </dt>
+                    <dd className="inline">{name.trim() || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="inline font-medium">Availability: </dt>
                     <dd className="inline">
-                      {proposedIso.length > 0
-                        ? proposedIso
-                            .map((t) => formatFullDateTime(t))
-                            .join("; ")
-                        : "None"}
+                      {isPoll
+                        ? noneWork
+                          ? CONSENSUS_LABEL.none_work
+                          : available.length > 0
+                            ? rally.candidates
+                                .filter((c) => available.includes(c.id))
+                                .map((c) => formatFullDateTime(c.startsAt))
+                                .join("; ")
+                            : "Nothing selected yet"
+                        : consensus
+                          ? CONSENSUS_LABEL[consensus]
+                          : "Nothing selected yet"}
                     </dd>
                   </div>
-                )}
-                {openLocation && (
+                  {wantsNewTimes && (
+                    <div>
+                      <dt className="inline font-medium">
+                        Times you suggest:{" "}
+                      </dt>
+                      <dd className="inline">
+                        {proposedIso.length > 0
+                          ? proposedIso
+                              .map((t) => formatFullDateTime(t))
+                              .join("; ")
+                          : "None"}
+                      </dd>
+                    </div>
+                  )}
+                  {openLocation && (
+                    <div>
+                      <dt className="inline font-medium">
+                        Location suggestion:{" "}
+                      </dt>
+                      <dd className="inline">{suggestion.trim() || "None"}</dd>
+                    </div>
+                  )}
                   <div>
-                    <dt className="inline font-medium">Location needs: </dt>
-                    <dd className="inline">{suggestion.trim() || "None"}</dd>
+                    <dt className="inline font-medium">Note: </dt>
+                    <dd className="inline">{note.trim() || "None"}</dd>
                   </div>
-                )}
-                <div>
-                  <dt className="inline font-medium">Note: </dt>
-                  <dd className="inline">{note.trim() || "None"}</dd>
-                </div>
-              </dl>
-            </section>
+                </dl>
+              </section>
 
-            {error && (
-              <p role="alert" className="text-sm font-medium">
-                {error}
-              </p>
-            )}
+              {error && (
+                <p role="alert" className="text-sm font-medium">
+                  {error}
+                </p>
+              )}
 
-            <button
-              type="submit"
-              disabled={busy}
-              aria-busy={busy}
-              className="w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background disabled:opacity-50"
-            >
-              {busy
-                ? "Saving…"
-                : saved
-                  ? "Submit updated response"
-                  : "Submit response"}
-            </button>
-          </form>
-        ))}
+              <button
+                type="submit"
+                disabled={busy}
+                aria-busy={busy}
+                className="w-full border border-border bg-foreground px-4 py-3 text-base font-medium text-background disabled:opacity-50"
+              >
+                {busy
+                  ? "Saving…"
+                  : saved
+                    ? "Submit updated response"
+                    : "Submit response"}
+              </button>
+            </form>
+          ))}
+      </div>
     </Shell>
   );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="rally-page mx-auto max-w-md px-4 py-6">{children}</main>
+    <main className="rally-page rally-attendee mx-auto max-w-md px-4 py-6">
+      {children}
+    </main>
   );
 }

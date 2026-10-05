@@ -79,26 +79,30 @@ export function SaveRallySection({ creatorToken }: { creatorToken: string }) {
 
   if (saved) {
     return (
-      <p className="mt-6 text-sm text-muted-foreground">Saved to My Rallies</p>
+      <section className="rally-save-section">
+        <p className="text-sm text-muted-foreground">Saved to My Rallies</p>
+      </section>
     );
   }
 
   return (
-    <section className="rally-save-section mt-6 border-t border-border pt-4">
+    <section className="rally-save-section">
       <h2 className="text-base font-semibold">keep this rally handy</h2>
       <p className="rally-save-copy text-sm text-muted-foreground">
         save to see your friends’ responses
       </p>
       {error && <p className="text-sm font-medium">{error}</p>}
       {showEmail ? (
-        <EmailSignIn
-          returnTo={`/m/${creatorToken}`}
-          buttonLabel="Send sign-in email"
-          onCancel={() => {
-            localStorage.removeItem(pendingKey);
-            setShowEmail(false);
-          }}
-        />
+        <div className="rally-save-form">
+          <EmailSignIn
+            returnTo={`/m/${creatorToken}`}
+            buttonLabel="Send sign-in email"
+            onCancel={() => {
+              localStorage.removeItem(pendingKey);
+              setShowEmail(false);
+            }}
+          />
+        </div>
       ) : (
         <button
           type="button"

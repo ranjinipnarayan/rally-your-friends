@@ -402,23 +402,25 @@ describe("share-image lifecycle copy", () => {
     responsesOpen: true,
   };
   it.each([
-    ["open", "OPEN", "Tap to vote!"],
-    ["confirmed", "CONFIRMED", "Tap to see the confirmed plan"],
-    ["cancelled", "CANCELLED", "The organizer cancelled this Rally"],
-    ["completed", "COMPLETED", "This event has passed"],
+    ["open", "you’re invited", "tap to rsvp + add to your calendar →"],
+    ["confirmed", "rally", "tap to rsvp + add to your calendar →"],
+    ["cancelled", "rally cancelled", "the organizer cancelled this rally"],
+    ["completed", "rally complete", "this event has passed"],
   ] as const)("labels %s accurately", (status, badge, footer) => {
     const tree = JSON.stringify(ogCardTree({ ...card, status }));
     expect(tree).toContain(badge);
     expect(tree).toContain(footer);
+    if (status === "confirmed")
+      expect(tree).not.toContain("the plan is confirmed");
     if (status === "cancelled" || status === "completed") {
       expect(tree).not.toContain("confirmed plan");
-      expect(tree).not.toContain("Tap to vote!");
+      expect(tree).not.toContain("tap to rsvp + add to your calendar →");
     }
   });
   it("does not invite responses after the response deadline", () => {
     const tree = JSON.stringify(ogCardTree({ ...card, responsesOpen: false }));
-    expect(tree).toContain("OPEN");
-    expect(tree).toContain("Responses are closed");
-    expect(tree).not.toContain("Tap to vote!");
+    expect(tree).toContain("rsvps are closed");
+    expect(tree).toContain("tap for the latest plan →");
+    expect(tree).not.toContain("tap to rsvp + add to your calendar →");
   });
 });

@@ -151,6 +151,13 @@ describe("native organizer JSON API", () => {
     expect(service.createPlan).not.toHaveBeenCalled();
     expect(service.managePlan).not.toHaveBeenCalled();
   });
+  it("rejects the deprecated cancel action before calling the service", async () => {
+    const response = await handleApi(
+      request(`/rallies/${id}`, "PATCH", { action: "cancel" }),
+    );
+    expect(response.status).toBe(400);
+    expect(service.managePlan).not.toHaveBeenCalled();
+  });
   it("uses an explicit action and returns the refreshed organizer view", async () => {
     const response = await handleApi(
       request(`/rallies/${id}`, "PATCH", { action: "confirm" }),

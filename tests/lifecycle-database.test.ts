@@ -273,7 +273,12 @@ describe("canonical lifecycle and ownership", () => {
     expect(rally.published_at).toBeNull();
     rally = await manage(rally, { action: "unarchive" });
     expect(rally.published_at).toBeNull();
-    rally = await manage(rally, { action: "cancel" });
+    // Fixture for a record cancelled before the action was deprecated.
+    await db.query(
+      "UPDATE public.rallies SET status = 'cancelled', next_action = 'none' WHERE id = $1",
+      [rally.id],
+    );
+    rally = await reload(rally);
     expect(rally).toMatchObject({
       status: "cancelled",
       published_at: null,
@@ -299,17 +304,33 @@ describe("canonical lifecycle and ownership", () => {
     await expect(create(payload)).rejects.toThrow();
   });
 
+  it.each(["draft", "open", "confirmed"])(
+    "rejects cancellation of %s rallies without changing their state",
+    async (status) => {
+      let rally = await create({
+        status: status === "draft" ? "draft" : "open",
+      });
+      if (status === "confirmed")
+        rally = await manage(rally, { action: "confirm" });
+      const before = await reload(rally);
+      await expect(manage(rally, { action: "cancel" })).rejects.toThrow(
+        /Invalid Rally action/,
+      );
+      expect(await reload(rally)).toEqual(before);
+    },
+  );
+
   it("requires account ownership even when another user knows the private creator link", async () => {
     const rally = await create();
     await expect(
-      manage(rally, { action: "cancel" }, otherOrganizer, rally.creator_token),
+      manage(rally, { action: "confirm" }, otherOrganizer, rally.creator_token),
     ).rejects.toThrow(/not available/);
     await expect(
-      manage(rally, { action: "cancel" }, null, rally.creator_token),
+      manage(rally, { action: "confirm" }, null, rally.creator_token),
     ).rejects.toThrow(/not available/);
     expect((await reload(rally)).status).toBe("open");
-    expect((await manage(rally, { action: "cancel" })).status).toBe(
-      "cancelled",
+    expect((await manage(rally, { action: "confirm" })).status).toBe(
+      "confirmed",
     );
   });
 
@@ -355,9 +376,10 @@ describe("canonical lifecycle and ownership", () => {
     await expect(
       manage(rally, { finalLocation: "Another place" }),
     ).rejects.toThrow(/final plan cannot/);
-    expect((await manage(rally, { action: "cancel" })).status).toBe(
-      "cancelled",
+    await expect(manage(rally, { action: "cancel" })).rejects.toThrow(
+      /Invalid Rally action/,
     );
+    expect((await reload(rally)).status).toBe("confirmed");
   });
 
   it.each(["open", "confirmed"])(
@@ -385,7 +407,10 @@ describe("canonical lifecycle and ownership", () => {
     const confirmed = await create();
     await manage(confirmed, { action: "confirm" });
     const cancelled = await create();
-    await manage(cancelled, { action: "cancel" });
+    await db.query(
+      "UPDATE public.rallies SET status = 'cancelled', next_action = 'none' WHERE id = $1",
+      [cancelled.id],
+    );
     const draft = await create({ status: "draft" });
     for (const rally of [open, confirmed, cancelled, draft]) {
       await db.query(
@@ -402,7 +427,7 @@ describe("canonical lifecycle and ownership", () => {
     expect((await reload(draft)).status).toBe("draft");
     await expect(respond(open)).rejects.toThrow(/not accepting responses/);
     await expect(manage(open, { action: "cancel" })).rejects.toThrow(
-      /completed Rally/,
+      /Invalid Rally action/,
     );
   });
 

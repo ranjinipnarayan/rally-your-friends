@@ -18,6 +18,7 @@ export type RallyView = {
   activity: string;
   timeMode: TimeMode;
   startsAt: string | null;
+  timeZone?: string | null;
   locationMode: LocationMode;
   location: string | null;
   status: RallyStatus;
@@ -247,4 +248,24 @@ export function leadingCandidate(
   );
   const top = counts[0];
   return top && top.count > 0 ? top : null;
+}
+
+export function formatFinalMessage(
+  activity: string,
+  time: string,
+  location: string,
+  url: string,
+  timeZone: string,
+) {
+  const when = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+    timeZoneName: "short",
+  }).format(new Date(time));
+  return `${activity} is confirmed!\n${when}\n${location}\n${url}`;
 }

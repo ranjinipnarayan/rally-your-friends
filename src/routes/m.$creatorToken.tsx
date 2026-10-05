@@ -10,7 +10,7 @@ import { PlanCardLap } from "@/components/PlanCardLap";
 import { RallyCard } from "@/components/RallyCard";
 import { SaveRallySection } from "@/components/SaveRallySection";
 import { useSession } from "@/hooks/useSession";
-import { downloadIcs } from "@/lib/ics";
+import { CalendarButton } from "@/components/CalendarButton";
 import {
   deleteRally,
   getCreatorView,
@@ -19,6 +19,7 @@ import {
 import {
   CONSENSUS_LABEL,
   NEXT_ACTION_LABEL,
+  formatFinalMessage,
   STATUS_LABEL,
   type RallyView,
   type ResponseView,
@@ -167,7 +168,7 @@ function CreatorPage() {
     startsAt?: string | null;
     locationMode?: "specific" | "open";
     location?: string | null;
-    action?: "save" | "publish" | "confirm" | "cancel";
+    action?: "save" | "publish" | "confirm";
   }) {
     setBusy(true);
     setError(null);
@@ -236,13 +237,9 @@ function CreatorPage() {
   }
 
   const isPoll = rally.timeMode === "poll";
-  const openLocation = rally.locationMode === "open";
   const isDraft = rally.status === "draft";
   const canEdit = isDraft || rally.status === "open";
   const leader = isPoll ? leadingCandidate(rally.candidates, responses) : null;
-  const suggestions = responses.flatMap((r) =>
-    r.suggestions.map((s) => ({ name: r.name, text: s })),
-  );
   const currentRally = rally;
 
   async function toggleEdit() {
@@ -302,6 +299,19 @@ function CreatorPage() {
     await patch(payload);
   }
 
+  const shareTime = rally.finalTime ?? rally.startsAt;
+  const shareLocation = rally.finalLocation ?? rally.location;
+  const shareMessage =
+    rally.finalMessage && shareTime && shareLocation
+      ? formatFinalMessage(
+          rally.activity,
+          shareTime,
+          shareLocation,
+          rally.publicUrl,
+          rally.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+        )
+      : rally.finalMessage;
+
   return (
     <Shell>
       <h1 className="flex items-center gap-2 text-lg font-bold">
@@ -311,9 +321,11 @@ function CreatorPage() {
         {STATUS_LABEL[rally.status]} · {responses.length}{" "}
         {responses.length === 1 ? "response" : "responses"}
       </p>
-      <p className="rally-next mb-3 text-sm" aria-live="polite">
-        Next: {NEXT_ACTION_LABEL[rally.nextAction]}
-      </p>
+      {rally.nextAction !== "none" && (
+        <p className="rally-next mb-3 text-sm" aria-live="polite">
+          Next: {NEXT_ACTION_LABEL[rally.nextAction]}
+        </p>
+      )}
       <PlanCardLap>
         <RallyCard
           rally={rally}
@@ -428,6 +440,18 @@ function CreatorPage() {
               {responses.map((r) => {
                 const time = responseTime(r);
                 const place = r.suggestions[0] ?? null;
+                const changesTime = Boolean(
+                  time &&
+                  new Date(time).getTime() !==
+                    new Date(rally.finalTime ?? rally.startsAt ?? "").getTime(),
+                );
+                const changesPlace = Boolean(
+                  place &&
+                  place.trim().toLowerCase() !==
+                    (rally.finalLocation ?? rally.location ?? "")
+                      .trim()
+                      .toLowerCase(),
+                );
                 return (
                   <li key={r.id} className="border border-border p-2 text-sm">
                     <p className="font-medium">{r.name}</p>
@@ -445,7 +469,7 @@ function CreatorPage() {
                     {r.note && <p className="mt-1">Note: {r.note}</p>}
                     {r.suggestions.length > 0 && (
                       <p className="mt-1">
-                        Location needs: {r.suggestions.join(", ")}
+                        Suggested place: {r.suggestions.join(", ")}
                       </p>
                     )}
                     {(r.timeSuggestions?.length ?? 0) > 0 && (
@@ -480,24 +504,9 @@ function CreatorPage() {
                         </ul>
                       </div>
                     )}
-                    {canEdit && (time || place) && (
+                    {canEdit && (changesTime || changesPlace) && (
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {time && place && (
-                          <button
-                            type="button"
-                            disabled={busy || editing}
-                            onClick={() =>
-                              void applyFromResponse(r, {
-                                time: true,
-                                place: true,
-                              })
-                            }
-                            className="border border-border px-2 py-1 text-xs disabled:opacity-50"
-                          >
-                            Use as plan
-                          </button>
-                        )}
-                        {time && (
+                        {changesTime && (
                           <button
                             type="button"
                             disabled={busy || editing}
@@ -509,7 +518,7 @@ function CreatorPage() {
                             Use this time
                           </button>
                         )}
-                        {place && (
+                        {changesPlace && (
                           <button
                             type="button"
                             disabled={busy || editing}
@@ -561,42 +570,6 @@ function CreatorPage() {
           </section>
         )}
 
-        {openLocation && suggestions.length > 0 && (
-          <section className="mt-6">
-            <h2 className="text-base font-semibold">Location needs</h2>
-            {suggestions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">None yet.</p>
-            ) : (
-              <ul className="mt-1 space-y-1 text-sm">
-                {suggestions.map((s, i) => (
-                  <li
-                    key={i}
-                    className="flex items-center justify-between gap-2"
-                  >
-                    <span>
-                      {s.text}{" "}
-                      <span className="text-muted-foreground">({s.name})</span>
-                    </span>
-                    {canEdit && (
-                      <button
-                        type="button"
-                        disabled={busy || editing}
-                        onClick={() => {
-                          setFinalLocation(s.text);
-                          void patch({ finalLocation: s.text });
-                        }}
-                        className="border border-border px-2 py-1 text-xs"
-                      >
-                        Use
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
-
         <section className="mt-6 space-y-2">
           {error && (
             <p role="alert" className="text-sm font-medium">
@@ -638,7 +611,7 @@ function CreatorPage() {
           )}
           {editing ? (
             <p className="text-xs text-muted-foreground">
-              Choose “Done editing” to save your changes first.
+              Use the save icon on your plan to save your changes first.
             </p>
           ) : (
             rally.status === "open" &&
@@ -649,54 +622,39 @@ function CreatorPage() {
             )
           )}
 
-          {rally.status === "confirmed" && (
-            <button
-              type="button"
-              onClick={() => downloadIcs(rally, inviteUrl || undefined)}
-              className="w-full border border-border px-4 py-3 text-sm"
-            >
-              Add to calendar
-            </button>
-          )}
-          {rally.finalMessage && (
-            <div className="space-y-2 border border-border p-3">
+          {shareMessage && (
+            <div className="rally-final-share">
               <p className="text-sm font-semibold">Final plan to share</p>
-              <p className="whitespace-pre-line break-words text-sm">
-                {rally.finalMessage}
+              <p className="rally-final-preview whitespace-pre-line break-words">
+                {shareMessage}
               </p>
-              <button
-                type="button"
-                onClick={() => void copy(rally.finalMessage!, "final")}
-                className="w-full border border-border px-3 py-2 text-sm"
-              >
-                {copied === "final" ? "Copied" : "Copy final message"}
-              </button>
+              <div className="rally-final-actions">
+                <button
+                  type="button"
+                  onClick={() => void copy(shareMessage!, "final")}
+                  className="border border-border bg-foreground px-3 py-2 text-sm font-medium text-background"
+                >
+                  {copied === "final" ? "Copied" : "Copy final message"}
+                </button>
+                {rally.status === "confirmed" && (
+                  <CalendarButton
+                    rally={rally}
+                    url={inviteUrl || undefined}
+                    className="border border-border px-3 py-2 text-sm"
+                  />
+                )}
+              </div>
             </div>
           )}
-          {(rally.status === "draft" ||
-            rally.status === "open" ||
-            rally.status === "confirmed") && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                if (
-                  window.confirm(
-                    "Cancel this Rally? Friends will see that the plan is cancelled.",
-                  )
-                ) {
-                  setEditing(false);
-                  void patch({ action: "cancel" });
-                }
-              }}
-              className="rally-secondary border border-border px-3 py-2 text-sm disabled:opacity-50"
-            >
-              Cancel Rally
-            </button>
+          {rally.status === "confirmed" && !rally.finalMessage && (
+            <CalendarButton
+              rally={rally}
+              url={inviteUrl || undefined}
+              className="border border-border px-3 py-2 text-sm"
+            />
           )}
         </section>
 
-        <SaveRallySection creatorToken={creatorToken} />
         <button
           type="button"
           disabled={busy}
@@ -728,6 +686,7 @@ function CreatorPage() {
           Delete Rally
         </button>
       </div>
+      <SaveRallySection creatorToken={creatorToken} />
     </Shell>
   );
 }

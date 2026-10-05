@@ -84,9 +84,7 @@ export function EmailSignIn({
       <form onSubmit={verify} className="space-y-2">
         <p className="text-sm" role="status">
           {sent ? `Check ${email}. ` : ""}
-          Enter the code from your sign-in email here. You can read the email on
-          another device, or use its link to sign in on the device where you
-          open it.
+          Enter your email and sign-in code below.
         </p>
         <input
           type="email"
@@ -126,29 +124,31 @@ export function EmailSignIn({
         >
           {busy ? "Signing in…" : "Sign in"}
         </button>
-        <button
-          type="button"
-          disabled={busy}
-          className="text-sm underline"
-          onClick={() => {
-            setEnterCode(false);
-            setSent(false);
-            setCode("");
-            setError(null);
-          }}
-        >
-          Change email or request a new code
-        </button>
-        {onCancel && (
+        <div className="rally-code-actions flex flex-wrap items-center gap-x-4 gap-y-1">
           <button
             type="button"
             disabled={busy}
-            onClick={onCancel}
-            className="ml-3 text-sm underline"
+            className="text-sm underline"
+            onClick={() => {
+              setEnterCode(false);
+              setSent(false);
+              setCode("");
+              setError(null);
+            }}
           >
-            Cancel
+            Request a new code
           </button>
-        )}
+          {onCancel && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onCancel}
+              className="text-sm underline"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
     );
   }

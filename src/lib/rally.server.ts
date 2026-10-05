@@ -13,6 +13,7 @@ import type {
   ResponseView,
 } from "./rally-shared";
 import type { SavedRally } from "./account.functions";
+import { formatFinalMessage } from "./rally-shared";
 import { RallyError } from "./rally-error";
 import { siteUrl } from "./site-url";
 
@@ -53,16 +54,23 @@ function toView(
     locked && location
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`
       : null;
-  // UTC is explicit: native clients can format the ISO time in the user's zone.
+  // Use the saved organizer timezone; legacy records have no recoverable zone.
   const finalMessage =
     locked && row.confirmed_at && time && location
-      ? `${row.activity} is confirmed!\n${new Date(time).toLocaleString("en-US", { dateStyle: "full", timeStyle: "short", timeZone: "UTC" })} UTC\n${location}\n${publicUrl}`
+      ? formatFinalMessage(
+          row.activity,
+          time,
+          location,
+          publicUrl,
+          row.time_zone ?? "UTC",
+        )
       : null;
   return {
     id: row.id,
     activity: row.activity,
     timeMode: row.time_mode as RallyView["timeMode"],
     startsAt: row.starts_at,
+    timeZone: row.time_zone,
     locationMode: row.location_mode as RallyView["locationMode"],
     location: row.location,
     status: row.status as RallyStatus,

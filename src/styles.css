@@ -330,7 +330,7 @@
   border-color: var(--rally-red);
 }
 .rally-manage button.bg-foreground {
-  border-bottom: 2px solid var(--rally-red);
+  border-bottom: 1px solid var(--border);
 }
 .rally-manage button:disabled {
   border-bottom-color: var(--border);
@@ -608,4 +608,150 @@ a.app-menu-item {
 .rally-side-car {
   z-index: 1;
   margin-top: -7px;
+}
+
+.rally-attendee {
+  --rally-red: oklch(0.55 0.22 27);
+}
+.rally-attendee .plan-card-lap > section {
+  border: 1px solid var(--rally-red);
+  padding: 18px;
+  background: var(--background);
+  box-shadow: 0 3px 14px oklch(0 0 0 / 3%);
+}
+.rally-attendee .plan-card-lap dl > div:first-child dd {
+  font-size: 20px;
+  line-height: 1.35;
+}
+.rally-response-panel {
+  margin-top: 28px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+}
+.rally-response-panel
+  :is(input:not([type="radio"]):not([type="checkbox"]), textarea, select) {
+  background: var(--background);
+}
+.rally-response-panel input:is([type="radio"], [type="checkbox"]) {
+  accent-color: var(--rally-red);
+}
+.rally-attendee :is(button, input, textarea, a):focus-visible {
+  outline: 2px solid var(--rally-red);
+  outline-offset: 3px;
+}
+.rally-response-panel button:not(.bg-foreground) {
+  background: var(--background);
+}
+.rally-response-panel button:hover:not(:disabled) {
+  border-color: var(--rally-red);
+}
+
+.rally-final-share {
+  padding-top: 0;
+}
+.rally-final-preview {
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  font-size: 13px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.rally-final-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.rally-save-form {
+  max-width: 360px;
+  margin-top: 14px;
+}
+.rally-save-hint {
+  margin-bottom: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+.rally-save-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rally-save-form form > * {
+  margin-top: 0;
+}
+.rally-save-form input {
+  min-height: 40px;
+  padding: 8px 12px;
+}
+.rally-save-form form > div.flex {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.rally-save-form button[type="submit"] {
+  flex: none;
+  align-self: flex-start;
+  width: auto;
+  padding: 9px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.rally-save-form button[type="button"] {
+  align-self: flex-start;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rally-save-form button[type="button"]:hover {
+  color: var(--foreground);
+}
+
+.rally-save-form p[role="status"] {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+.rally-save-form .rally-code-actions {
+  gap: 4px 16px;
+}
+
+.rally-save-section {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+}
+.rally-save-section h2 {
+  font-size: 13px;
+}
+
+.rally-calendar-picker {
+  margin: auto;
+  width: min(400px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--foreground);
+  background: var(--background);
+}
+.rally-calendar-picker::backdrop {
+  background: oklch(0 0 0 / 30%);
+}
+
+.rally-attendee-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
 }

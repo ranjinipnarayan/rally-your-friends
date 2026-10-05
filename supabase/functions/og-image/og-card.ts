@@ -7,28 +7,73 @@ export type OgCardData = {
   responsesOpen: boolean;
 };
 
-const BLACK = "#000000";
-const WHITE = "#ffffff";
-const GREY = "#6b6b6b";
+const INK = "#080d1b";
+const RED = "#df242b";
+const MUTED = "#61728a";
 
 function truncate(value: string, max: number) {
-  const v = value.trim();
+  const v = value.trim().toLowerCase();
   return v.length > max ? `${v.slice(0, max - 1)}…` : v;
+}
+
+function finishFlag() {
+  return {
+    type: "svg",
+    props: {
+      width: 38,
+      height: 38,
+      viewBox: "0 0 24 24",
+      children: [
+        {
+          type: "path",
+          props: { d: "M4 3v19", stroke: INK, strokeWidth: 1.7 },
+        },
+        {
+          type: "path",
+          props: {
+            d: "M5 3h15v12H5z",
+            fill: "white",
+            stroke: INK,
+            strokeWidth: 1.4,
+          },
+        },
+        ...[
+          [5, 3],
+          [15, 3],
+          [10, 7],
+          [5, 11],
+          [15, 11],
+        ].map(([x, y]) => ({
+          type: "rect",
+          props: { x, y, width: 5, height: 4, fill: INK },
+        })),
+      ],
+    },
+  };
 }
 
 /** A satori element tree (plain objects; no JSX needed). */
 export function ogCardTree(data: OgCardData) {
-  const status = data.status;
+  const status =
+    data.status === "confirmed"
+      ? ""
+      : data.status === "cancelled"
+        ? "rally cancelled"
+        : data.status === "completed"
+          ? "rally complete"
+          : data.responsesOpen
+            ? "you’re invited"
+            : "rsvps are closed";
   const footer =
-    status === "confirmed"
-      ? "Tap to see the confirmed plan"
-      : status === "cancelled"
-        ? "The organizer cancelled this Rally"
-        : status === "completed"
-          ? "This event has passed"
-          : data.responsesOpen === false
-            ? "Responses are closed"
-            : "Tap to vote!";
+    data.status === "confirmed"
+      ? "tap to rsvp + add to your calendar →"
+      : data.status === "cancelled"
+        ? "the organizer cancelled this rally"
+        : data.status === "completed"
+          ? "this event has passed"
+          : data.responsesOpen
+            ? "tap to rsvp + add to your calendar →"
+            : "tap for the latest plan →";
   const row = (label: string, value: string) => ({
     type: "div",
     props: {
@@ -37,27 +82,20 @@ export function ogCardTree(data: OgCardData) {
         {
           type: "div",
           props: {
-            style: {
-              fontSize: 24,
-              letterSpacing: 3,
-              color: GREY,
-              width: 140,
-              textTransform: "uppercase",
-            },
+            style: { fontSize: 25, color: MUTED, width: 95 },
             children: label,
           },
         },
         {
           type: "div",
           props: {
-            style: { fontSize: 40, color: BLACK },
-            children: truncate(value, 42),
+            style: { fontSize: 34, color: INK },
+            children: truncate(value, 48),
           },
         },
       ],
     },
   });
-
   return {
     type: "div",
     props: {
@@ -65,86 +103,130 @@ export function ogCardTree(data: OgCardData) {
         width: 1200,
         height: 630,
         display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        backgroundColor: WHITE,
-        border: `10px solid ${BLACK}`,
-        padding: "56px 64px",
+        padding: 30,
+        backgroundColor: "#f1f5f9",
         fontFamily: "Inter",
       },
-      children: [
-        {
-          type: "div",
-          props: {
-            style: {
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+      children: {
+        type: "div",
+        props: {
+          style: {
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            flex: 1,
+            backgroundColor: "#ffffff",
+            border: `2px solid ${RED}`,
+            borderRadius: 26,
+            padding: "40px 48px",
+          },
+          children: [
+            {
+              type: "div",
+              props: {
+                style: {
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                },
+                children: [
+                  {
+                    type: "div",
+                    props: {
+                      style: {
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        fontSize: 34,
+                        fontWeight: 700,
+                        color: INK,
+                      },
+                      children: ["rally", finishFlag()],
+                    },
+                  },
+                  {
+                    type: "div",
+                    props: {
+                      style: { fontSize: 24, color: MUTED },
+                      children: status,
+                    },
+                  },
+                ],
+              },
             },
-            children: [
-              {
-                type: "div",
-                props: {
-                  style: {
-                    fontSize: 30,
-                    fontWeight: 700,
-                    letterSpacing: 8,
-                    color: BLACK,
+            {
+              type: "div",
+              props: {
+                style: { display: "flex", flexDirection: "column", gap: 24 },
+                children: [
+                  {
+                    type: "div",
+                    props: {
+                      style: {
+                        fontSize: 72,
+                        fontWeight: 700,
+                        color: INK,
+                        lineHeight: 1.08,
+                      },
+                      children: truncate(data.activity, 48),
+                    },
                   },
-                  children: "RALLY",
-                },
-              },
-              {
-                type: "div",
-                props: {
-                  style: {
-                    fontSize: 22,
-                    letterSpacing: 3,
-                    color: WHITE,
-                    backgroundColor: BLACK,
-                    padding: "8px 18px",
+                  {
+                    type: "div",
+                    props: {
+                      style: {
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 12,
+                      },
+                      children: [
+                        row("when", data.when),
+                        row("where", data.where),
+                      ],
+                    },
                   },
-                  children: status.toUpperCase(),
-                },
+                ],
               },
-            ],
-          },
-        },
-        {
-          type: "div",
-          props: {
-            style: { display: "flex", flexDirection: "column", gap: 28 },
-            children: [
-              {
-                type: "div",
-                props: {
-                  style: {
-                    fontSize: 84,
-                    fontWeight: 700,
-                    color: BLACK,
-                    lineHeight: 1.05,
+            },
+            {
+              type: "div",
+              props: {
+                style: {
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                },
+                children: [
+                  {
+                    type: "div",
+                    props: {
+                      style: {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "100%",
+                        borderRadius: 12,
+                        padding: "18px 24px",
+                        fontSize: 32,
+                        fontWeight: 700,
+                        color:
+                          data.status === "confirmed" || data.responsesOpen
+                            ? "#ffffff"
+                            : MUTED,
+                        backgroundColor:
+                          data.status === "confirmed" || data.responsesOpen
+                            ? RED
+                            : "#f1f5f9",
+                      },
+                      children: footer,
+                    },
                   },
-                  children: truncate(data.activity, 34),
-                },
+                ],
               },
-              {
-                type: "div",
-                props: {
-                  style: { display: "flex", flexDirection: "column", gap: 14 },
-                  children: [row("When", data.when), row("Where", data.where)],
-                },
-              },
-            ],
-          },
+            },
+          ],
         },
-        {
-          type: "div",
-          props: {
-            style: { fontSize: 26, color: GREY },
-            children: footer,
-          },
-        },
-      ],
+      },
     },
   };
 }

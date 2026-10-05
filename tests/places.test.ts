@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { lookupPlaces } from "../src/lib/places.server";
+import { lookupPlaces, lookupCalendarPlace } from "../src/lib/places.server";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -96,4 +96,95 @@ describe("autocomplete budget", () => {
       expect(fetcher).toHaveBeenCalledTimes(1);
     },
   );
+});
+
+describe("calendar venue lookup", () => {
+  it("reserves one request and returns coordinates for one matching venue", async () => {
+    const reserve = vi.fn(async () => true);
+    const fetcher = vi.fn(async () =>
+      Response.json({
+        places: [
+          {
+            formattedAddress: "123 Main Street",
+            location: { latitude: 40.7, longitude: -74 },
+          },
+        ],
+      }),
+    );
+    expect(
+      await lookupCalendarPlace("Venue, New York", {
+        apiKey: "key",
+        reserve,
+        fetcher,
+      }),
+    ).toEqual({ address: "123 Main Street", latitude: 40.7, longitude: -74 });
+    expect(reserve).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+  it.each([
+    { places: [] },
+    { places: [{}, {}] },
+    { places: [{ formattedAddress: "Unknown" }] },
+    {
+      places: [
+        { formattedAddress: "Bad", location: { latitude: 91, longitude: 0 } },
+      ],
+    },
+    { places: [{}], nextPageToken: "more" },
+  ])(
+    "does not invent a location for ambiguous or invalid results: %j",
+    async (result) => {
+      expect(
+        await lookupCalendarPlace("Venue", {
+          apiKey: "key",
+          reserve: async () => true,
+          fetcher: async () => Response.json(result),
+        }),
+      ).toBeNull();
+    },
+  );
+  it("returns both map pins for the user to choose when a venue is ambiguous", async () => {
+    const places = [
+      {
+        formattedAddress: "New York",
+        location: { latitude: 40.7, longitude: -74 },
+      },
+      {
+        formattedAddress: "Paris",
+        location: { latitude: 48.8, longitude: 2.3 },
+      },
+    ];
+    expect(
+      await lookupCalendarPlace("Le Vin", {
+        apiKey: "key",
+        reserve: async () => true,
+        fetcher: async () => Response.json({ places }),
+      }),
+    ).toEqual([
+      { address: "New York", latitude: 40.7, longitude: -74 },
+      { address: "Paris", latitude: 48.8, longitude: 2.3 },
+    ]);
+  });
+  it("does not request coordinates when the budget is exhausted", async () => {
+    const fetcher = vi.fn();
+    expect(
+      await lookupCalendarPlace("Venue", {
+        apiKey: "key",
+        reserve: async () => false,
+        fetcher,
+      }),
+    ).toBeNull();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("keeps export available if Google fails", async () => {
+    expect(
+      await lookupCalendarPlace("Venue", {
+        apiKey: "key",
+        reserve: async () => true,
+        fetcher: async () => {
+          throw new Error("offline");
+        },
+      }),
+    ).toBeNull();
+  });
 });

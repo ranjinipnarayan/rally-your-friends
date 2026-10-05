@@ -95,9 +95,11 @@ Configure it as `GOOGLE_MAPS_API_KEY` in Pages runtime secrets. Do not use brows
 referrer restrictions for a server-side key or enable unrelated Maps APIs.
 
 The current Autocomplete Requests SKU includes 10,000 free requests per month.
-This app allows only 150 outbound attempts per UTC day, including failed requests,
-across all deployments using the same database. It does not request Place Details
-or start sessions that require a billable details call. Limits are hardcoded in SQL
+Calendar exports use Text Search Pro to resolve one unambiguous venue to its
+address and coordinates (5,000 free requests per month). Autocomplete and calendar
+lookups share a limit of 150 outbound attempts per UTC day, including failures,
+across all deployments using the same database: at most 4,650 in a 31-day month.
+The app does not request Place Details or start sessions requiring a details call. Limits are hardcoded in SQL
 and cannot be increased by a request parameter. Concurrent reservations use one
 atomic upsert; database failure stops autocomplete calls. Reservation failures and
 quota exhaustion return an empty suggestion list, so manual location entry works.
