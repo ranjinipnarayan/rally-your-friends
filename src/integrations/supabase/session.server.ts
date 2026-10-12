@@ -4,7 +4,7 @@ import { RallyError } from "../../lib/rally-error";
 /** Both web RPCs and native requests authenticate the actual backend user. */
 export async function requestUser(request: Request, required = true) {
   const header = request.headers.get("authorization");
-  if (!header && !required) return null;
+  if (header === null && !required) return null;
   const token = header?.match(/^Bearer ([^\s]+)$/i)?.[1];
   if (!token || token.split(".").length !== 3) {
     throw new RallyError(

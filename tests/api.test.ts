@@ -7,6 +7,7 @@ const service = vi.hoisted(() => ({
   listPlans: vi.fn(),
   managePlan: vi.fn(),
   organizerView: vi.fn(),
+  saveToAccount: vi.fn(),
 }));
 const auth = vi.hoisted(() => ({ requestUser: vi.fn() }));
 vi.mock("../src/lib/rally.server", () => service);
@@ -213,5 +214,119 @@ describe("native organizer JSON API", () => {
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain("secret");
     logging.mockRestore();
+  });
+});
+
+describe("guest API", () => {
+  function guest(
+    path = "/rallies",
+    method = "GET",
+    body?: unknown,
+    token?: string,
+    ip = "guest-test",
+  ) {
+    const req = request(path, method, body, { "CF-Connecting-IP": ip });
+    req.headers.delete("authorization");
+    if (token) req.headers.set("X-Rally-Creator-Token", token);
+    auth.requestUser.mockImplementation(async (_req, required) => {
+      if (required) throw new RallyError("unauthorized", "Sign in", 401);
+      return null;
+    });
+    return req;
+  }
+  it("creates anonymously with exactly the share and management fields", async () => {
+    const created = {
+      id,
+      title: "Dinner",
+      publicUrl: "https://rally.example/r/invite",
+      creatorToken: "secret",
+    };
+    service.createPlan.mockResolvedValue({ ...created, inviteToken: "invite" });
+    const response = await handleApi(guest("/rallies", "POST", input));
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual(created);
+    expect(service.createPlan).toHaveBeenCalledWith(
+      { ...input, status: "open" },
+      null,
+    );
+  });
+  it.each(["GET", "PATCH", "DELETE"])(
+    "manages guests with a rally-bound token via %s",
+    async (method) => {
+      const response = await handleApi(
+        guest(
+          `/rallies/${id}`,
+          method,
+          method === "PATCH" ? { action: "confirm" } : undefined,
+          "secret",
+        ),
+      );
+      expect(response.status).toBe(method === "DELETE" ? 204 : 200);
+      const fn =
+        method === "DELETE"
+          ? service.deletePlan
+          : method === "PATCH"
+            ? service.managePlan
+            : service.organizerView;
+      expect(fn.mock.calls[0]!.slice(0, 2)).toEqual([
+        null,
+        { creatorToken: "secret", expectedId: id },
+      ]);
+    },
+  );
+  it.each(["/me", "/rallies", `/rallies/${id}/claim`])(
+    "requires account authentication for %s",
+    async (path) => {
+      expect(
+        (
+          await handleApi(
+            guest(
+              path,
+              path.endsWith("claim") ? "POST" : "GET",
+              undefined,
+              "secret",
+            ),
+          )
+        ).status,
+      ).toBe(401);
+      expect(service.saveToAccount).not.toHaveBeenCalled();
+    },
+  );
+  it("claims using both credentials and the exact rally ID", async () => {
+    service.saveToAccount.mockResolvedValue({ saved: true });
+    const response = await handleApi(
+      request(`/rallies/${id}/claim`, "POST", undefined, {
+        "X-Rally-Creator-Token": "secret",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ saved: true });
+    expect(service.saveToAccount).toHaveBeenCalledWith(
+      "secret",
+      "organizer",
+      id,
+    );
+    expect(
+      (await handleApi(request(`/rallies/${id}/claim`, "POST"))).status,
+    ).toBe(401);
+  });
+  it("limits anonymous creation before calling the database", async () => {
+    service.createPlan.mockResolvedValue({ id });
+    for (let i = 0; i < 10; i++)
+      expect(
+        (
+          await handleApi(
+            guest("/rallies", "POST", input, undefined, "rate-test"),
+          )
+        ).status,
+      ).toBe(201);
+    expect(
+      (
+        await handleApi(
+          guest("/rallies", "POST", input, undefined, "rate-test"),
+        )
+      ).status,
+    ).toBe(429);
+    expect(service.createPlan).toHaveBeenCalledTimes(10);
   });
 });

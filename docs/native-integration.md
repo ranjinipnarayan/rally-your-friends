@@ -123,8 +123,12 @@ when configuring its storage. The native implementation must coordinate refresh
 across both processes and reread the shared session on activation. Sign-out must
 clear shared credentials and cached account displays in both targets.
 
-If the extension has no usable session, show **“Open Rally to sign in.”** It must
-not create anonymously as a fallback. With a session, use the structured flow
+If the extension has no session, create a guest Rally through `POST /rallies`
+without Authorization. Persist the returned ID and creator token in secure shared
+device storage before inserting the public URL. The signed-out app lists these
+local records and manages each with `X-Rally-Creator-Token`; optional sign-in
+allows claiming them through `POST /rallies/:id/claim` for cross-device access.
+With a session, use the same structured flow
 and insert the returned title/public HTTPS URL as described in [api.md](api.md).
 Do not access contacts or add natural-language creation.
 
@@ -196,7 +200,7 @@ Before releasing either native target, verify these on devices:
 - New and existing email accounts; successful, expired, and already-used
   callbacks; the expected account from `/me`.
 - App-to-extension session sharing after relaunch, concurrent refresh,
-  sign-out/account switching, and the logged-out extension prompt.
+  sign-out/account switching, and guest creation and local signed-out management.
 - All four timing/location combinations, editable poll shortcuts, creation
   appearing immediately in the organizer app, and no duplicate POST on an
   ambiguous connection failure.

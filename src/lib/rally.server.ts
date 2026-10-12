@@ -249,7 +249,7 @@ export async function respond(inviteToken: string, data: ResponseInput) {
 
 export async function organizerView(
   userId: string | null,
-  lookup: { id: string } | { creatorToken: string },
+  lookup: { id: string } | { creatorToken: string; expectedId?: string },
 ) {
   const result =
     "id" in lookup
@@ -264,6 +264,12 @@ export async function organizerView(
           error: null,
         };
   check(result.error);
+  if (
+    "creatorToken" in lookup &&
+    lookup.expectedId &&
+    result.data?.id !== lookup.expectedId
+  )
+    throw new RallyError("not_found", "This Rally isn't in your account.", 404);
   if (!result.data)
     return {
       rally: null,
@@ -299,7 +305,7 @@ export async function organizerView(
 
 export async function managePlan(
   userId: string | null,
-  lookup: { id: string } | { creatorToken: string },
+  lookup: { id: string } | { creatorToken: string; expectedId?: string },
   patch: UpdateRallyInput,
 ) {
   const result =
@@ -315,6 +321,12 @@ export async function managePlan(
           error: null,
         };
   check(result.error);
+  if (
+    "creatorToken" in lookup &&
+    lookup.expectedId &&
+    result.data?.id !== lookup.expectedId
+  )
+    throw new RallyError("not_found", "This Rally isn't in your account.", 404);
   if (!result.data)
     throw new RallyError("not_found", "This Rally isn't in your account.", 404);
   authorize(
@@ -334,7 +346,7 @@ export async function managePlan(
 
 export async function deletePlan(
   userId: string | null,
-  lookup: { id: string } | { creatorToken: string },
+  lookup: { id: string } | { creatorToken: string; expectedId?: string },
 ) {
   if ("id" in lookup && !userId)
     throw new RallyError("unauthorized", "Please sign in.", 401);
@@ -351,6 +363,12 @@ export async function deletePlan(
           error: null,
         };
   check(result.error);
+  if (
+    "creatorToken" in lookup &&
+    lookup.expectedId &&
+    result.data?.id !== lookup.expectedId
+  )
+    throw new RallyError("not_found", "This Rally isn't in your account.", 404);
   if (!result.data)
     throw new RallyError(
       "not_found",
@@ -391,9 +409,14 @@ async function wasDeleted(
   return !!data;
 }
 
-export async function saveToAccount(creatorToken: string, userId: string) {
+export async function saveToAccount(
+  creatorToken: string,
+  userId: string,
+  expectedId?: string,
+) {
   const row = await byToken(creatorToken, "creator_token");
-  if (!row) throw new RallyError("not_found", "This link isn't valid.", 404);
+  if (!row || (expectedId && row.id !== expectedId))
+    throw new RallyError("not_found", "This link isn't valid.", 404);
   if (row.user_id === userId) return { saved: true };
   if (row.user_id)
     throw new RallyError(

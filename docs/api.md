@@ -14,22 +14,22 @@ verification; see
 
 This is the shared backend for the website, organizer app, and thin structured
 iMessage extension. The backend owns Rally state. The website also supports
-anonymous creation and recipient replies; this organizer API always requires an
-account.
+anonymous creation and recipient replies. This API supports guest creation and
+management; sign-in is optional for saving to an account and cross-device access.
 
 ## Extension flow
 
-1. Read the containing app's shared authenticated session. If unavailable, show
-   **“Open Rally to sign in.”** Do not fall back to anonymous API creation.
-2. Preserve the structured activity, timing, and location choices. No
-   natural-language parsing or contacts access is required.
-3. POST a complete plan to `/rallies` with `status: "open"`.
-4. After `201`, use the returned `title` and `publicUrl` as the message text:
-   `title + "\n" + publicUrl`. The Rally already belongs to the organizer.
-5. Insert that text in the current conversation with
+1. Preserve the structured activity, timing, and location choices.
+2. POST a complete plan to `/rallies` with `status: "open"`. Omit Authorization
+   when signed out; no app launch or login is needed.
+3. After `201`, durably store the returned `id` and `creatorToken` in secure shared
+   device storage accessible to the app and extension before inserting the message.
+   The signed-out containing app should list these device records and fetch each
+   rally using its creator token. The API has no anonymous account-wide listing.
+4. Insert `title + "\n" + publicUrl` using
    [MSConversation.insertText](https://developer.apple.com/documentation/messages/msconversation/inserttext%28_%3Acompletionhandler%3A%29).
-   This fills the Messages input field; the user taps Send. Recipients need no
-   extension or account.
+   The user taps Send; recipients need no extension or account.
+5. Offer optional sign-in and claim each local rally to enable cross-device access.
 
 Never insert `creatorToken`, a `/m/` URL, access tokens, or refresh tokens into a
 conversation. Only share a published Rally; drafts reserve a URL without making
@@ -37,7 +37,7 @@ their page public.
 
 ## Requests and authentication
 
-Send the **Supabase user access-token JWT** in every request:
+Send the **Supabase user access-token JWT** for account operations:
 
 ```http
 GET /api/v1/me HTTP/1.1
@@ -62,6 +62,13 @@ to Rally REST endpoints or store them in logs. The
 [native integration guide](./native-integration.md#containing-app-email-login)
 includes the Swift SDK call and shared-session handling.
 
+Guest creation omits Authorization. Supplied credentials (including an empty,
+malformed, invalid, or expired Authorization header) return `401`; they never
+fall back to guest creation. GET/PATCH/DELETE detail accept
+`X-Rally-Creator-Token: <CREATOR_TOKEN>` for an unclaimed rally. The token must
+match that exact UUID. After claiming, the account owner's Bearer token is
+required, even if the creator token is still known. Cookies are ignored.
+
 POST and PATCH require `Content-Type: application/json`. Maximum body size is
 **16,384 bytes (16 KiB)**. JSON request names are camelCase; unknown fields are
 rejected. This API does not authenticate cookies, grant browser CORS access, or
@@ -75,14 +82,15 @@ or without fractional seconds, and display them in the user's time zone.
 
 ## Endpoints
 
-| Method | Path | Success |
-| --- | --- | --- |
-| GET | `/me` | `200`, current backend user |
-| GET | `/rallies` | `200`, all Rallies owned by that user |
-| POST | `/rallies` | `201`, saved ID, title, tokens, public URL |
-| GET | `/rallies/:id` | `200`, organizer detail and responses |
-| PATCH | `/rallies/:id` | `200`, updated organizer detail and responses |
-| DELETE | `/rallies/:id` | `204`, permanently deleted; empty response body |
+| Method | Path                 | Success                                         |
+| ------ | -------------------- | ----------------------------------------------- |
+| POST   | `/rallies/:id/claim` | `200`, `{ "saved": true }`                      |
+| GET    | `/me`                | `200`, current backend user                     |
+| GET    | `/rallies`           | `200`, all Rallies owned by that user           |
+| POST   | `/rallies`           | `201`, saved ID, title, tokens, public URL      |
+| GET    | `/rallies/:id`       | `200`, organizer detail and responses           |
+| PATCH  | `/rallies/:id`       | `200`, updated organizer detail and responses   |
+| DELETE | `/rallies/:id`       | `204`, permanently deleted; empty response body |
 
 ### GET /me
 
@@ -119,24 +127,24 @@ Content-Type: application/json
 }
 ```
 
-| Field | Contract |
-| --- | --- |
-| `activity` | Trimmed string, up to 200 characters; nonblank for Open/publish. Use `Let's hang out` to match the website's unspecified activity. |
-| `timeMode` | `specific` or `poll` |
-| `startsAt` | Future ISO timestamp for an Open specific-time plan; null for a poll |
-| `candidates` | Array of timestamps, maximum 10. An Open poll requires 1–10 future times; send `[]` for a specific time. |
-| `locationMode` | `specific` or `open` |
-| `location` | String up to 200 characters, nonblank for an Open specific location; null for open location |
-| `status` | `open` only (the default); other creation statuses are rejected |
+| Field          | Contract                                                                                                                           |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `activity`     | Trimmed string, up to 200 characters; nonblank for Open/publish. Use `Let's hang out` to match the website's unspecified activity. |
+| `timeMode`     | `specific` or `poll`                                                                                                               |
+| `startsAt`     | Future ISO timestamp for an Open specific-time plan; null for a poll                                                               |
+| `candidates`   | Array of timestamps, maximum 10. An Open poll requires 1–10 future times; send `[]` for a specific time.                           |
+| `locationMode` | `specific` or `open`                                                                                                               |
+| `location`     | String up to 200 characters, nonblank for an Open specific location; null for open location                                        |
+| `status`       | `open` only (the default); other creation statuses are rejected                                                                    |
 
 All four timing/location branches are supported:
 
-| Branch | `timeMode` / `startsAt` / `candidates` | `locationMode` / `location` |
-| --- | --- | --- |
-| Fixed time, fixed place | `specific` / future timestamp / `[]` | `specific` / place text |
-| Fixed time, ask about place | `specific` / future timestamp / `[]` | `open` / null |
-| Poll, fixed place | `poll` / null / future timestamps | `specific` / place text |
-| Poll, ask about place | `poll` / null / future timestamps | `open` / null |
+| Branch                      | `timeMode` / `startsAt` / `candidates` | `locationMode` / `location` |
+| --------------------------- | -------------------------------------- | --------------------------- |
+| Fixed time, fixed place     | `specific` / future timestamp / `[]`   | `specific` / place text     |
+| Fixed time, ask about place | `specific` / future timestamp / `[]`   | `open` / null               |
+| Poll, fixed place           | `poll` / null / future timestamps      | `specific` / place text     |
+| Poll, ask about place       | `poll` / null / future timestamps      | `open` / null               |
 
 For example, the poll/open-location body is:
 
@@ -156,13 +164,12 @@ Convert the website's relative date-window/time-of-day choices into concrete
 timestamps before submitting; the API does not accept labels such as “This
 weekend.” See the native integration guide for matching those shortcuts.
 
-Creation saves the plan and its poll candidates atomically, immediately under
-the authenticated organizer. Response:
+Creation saves the plan and its poll candidates atomically. With a session it
+belongs to that account; without one it remains a guest rally. Response:
 
 ```json
 {
   "id": "11111111-1111-4111-8111-111111111111",
-  "inviteToken": "abcdefgh23456789abcdefgh23456789",
   "creatorToken": "qrstuvwx23456789qrstuvwx23456789",
   "publicUrl": "https://rally-your-friends.com/r/abcdefgh23456789abcdefgh23456789",
   "title": "Dinner"
@@ -181,31 +188,33 @@ Deleted Rallies are absent from all sections, including Past.
 
 ```json
 {
-  "rallies": [{
-    "id": "11111111-1111-4111-8111-111111111111",
-    "creatorToken": "qrstuvwx23456789qrstuvwx23456789",
-    "inviteToken": "abcdefgh23456789abcdefgh23456789",
-    "publicUrl": "https://rally-your-friends.com/r/abcdefgh23456789abcdefgh23456789",
-    "activity": "Dinner",
-    "time": "2099-07-10T23:00:00+00:00",
-    "location": "Central Park, New York",
-    "status": "open",
-    "nextAction": "finalize",
-    "archivedAt": null,
-    "responseCount": 1,
-    "section": "needs_you"
-  }]
+  "rallies": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "creatorToken": "qrstuvwx23456789qrstuvwx23456789",
+      "inviteToken": "abcdefgh23456789abcdefgh23456789",
+      "publicUrl": "https://rally-your-friends.com/r/abcdefgh23456789abcdefgh23456789",
+      "activity": "Dinner",
+      "time": "2099-07-10T23:00:00+00:00",
+      "location": "Central Park, New York",
+      "status": "open",
+      "nextAction": "finalize",
+      "archivedAt": null,
+      "responseCount": 1,
+      "section": "needs_you"
+    }
+  ]
 }
 ```
 
 `time` and `location` may be null; they prefer the organizer's saved final choices
 over the original proposal. Group by the server-provided `section`:
 
-| `section` | UI | Membership |
-| --- | --- | --- |
-| `needs_you` | Needs You | Drafts and actionable Open plans |
-| `active` | Active | Other current plans, including Confirmed |
-| `past` | Past | Archived, Cancelled, or Completed |
+| `section`   | UI        | Membership                               |
+| ----------- | --------- | ---------------------------------------- |
+| `needs_you` | Needs You | Drafts and actionable Open plans         |
+| `active`    | Active    | Other current plans, including Confirmed |
+| `past`      | Past      | Archived, Cancelled, or Completed        |
 
 Show the response count, status, and next action. Refetch after creating or
 mutating, when returning to the foreground, and on manual refresh. Periodic
@@ -214,7 +223,7 @@ do not run background keep-alive traffic or maintain a separate local lifecycle.
 
 ### GET /rallies/:id
 
-The ID must be a UUID belonging to the authenticated account. This example shows
+The ID must be a UUID authorized by the account owner or its guest creator token. This example shows
 the result after explicit confirmation of a poll:
 
 ```json
@@ -238,20 +247,24 @@ the result after explicit confirmation of a poll:
     "finalTime": "2099-07-10T23:00:00+00:00",
     "finalLocation": "Central Park, New York",
     "expiresAt": "2099-07-31T12:00:00+00:00",
-    "candidates": [{
-      "id": "33333333-3333-4333-8333-333333333333",
-      "startsAt": "2099-07-10T23:00:00+00:00"
-    }]
+    "candidates": [
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "startsAt": "2099-07-10T23:00:00+00:00"
+      }
+    ]
   },
-  "responses": [{
-    "id": "44444444-4444-4444-8444-444444444444",
-    "name": "Sam",
-    "consensus": "some_work",
-    "note": null,
-    "available": ["33333333-3333-4333-8333-333333333333"],
-    "suggestions": ["Central Park, New York"],
-    "timeSuggestions": []
-  }],
+  "responses": [
+    {
+      "id": "44444444-4444-4444-8444-444444444444",
+      "name": "Sam",
+      "consensus": "some_work",
+      "note": null,
+      "available": ["33333333-3333-4333-8333-333333333333"],
+      "suggestions": ["Central Park, New York"],
+      "timeSuggestions": []
+    }
+  ],
   "inviteToken": "abcdefgh23456789abcdefgh23456789",
   "creatorToken": "qrstuvwx23456789qrstuvwx23456789"
 }
@@ -299,12 +312,12 @@ Then, on an explicit organizer confirmation, send:
 { "action": "confirm" }
 ```
 
-| `action` | Behavior |
-| --- | --- |
-| `save` (default) | Save draft edits or an Open plan's tentative final choices |
-| `publish` | Validate a complete Draft, make it Open/public, start a fresh 30-day reply window |
-| `confirm` | Open only; require a future final time and nonblank place, then lock the plan |
-| `cancel` | Close a Draft, Open, or Confirmed plan; Completed cannot be cancelled |
+| `action`         | Behavior                                                                          |
+| ---------------- | --------------------------------------------------------------------------------- |
+| `save` (default) | Save draft edits or an Open plan's tentative final choices                        |
+| `publish`        | Validate a complete Draft, make it Open/public, start a fresh 30-day reply window |
+| `confirm`        | Open only; require a future final time and nonblank place, then lock the plan     |
+| `cancel`         | Close a Draft, Open, or Confirmed plan; Completed cannot be cancelled             |
 
 All creation fields are optional in PATCH and may edit **Drafts only**. Open
 plans accept `finalTime` (future ISO timestamp or null) and `finalLocation`
@@ -323,7 +336,7 @@ Only Cancelled and Completed Rallies belong in Past.
 
 ### DELETE /rallies/:id
 
-Requires the owner's Bearer session. Send no body. On success, return `204 No
+Requires the owner's Bearer session or the unclaimed rally's creator token. Send no body. On success, return `204 No
 Content`; do not attempt to decode JSON. Remove the Rally from native UI state
 and refresh the organizer list. Confirm the irreversible deletion with the user
 before sending this request.
@@ -338,15 +351,30 @@ Missing, already-deleted, and other-account IDs return `404`; no account details
 are disclosed. An unauthenticated request returns `401`. After an ambiguous
 network failure, refresh the list/detail to determine whether deletion completed.
 
+### POST /rallies/:id/claim
+
+Send both `Authorization: Bearer <USER_ACCESS_TOKEN>` and
+`X-Rally-Creator-Token: <CREATOR_TOKEN>`, with no body. Returns
+`200 { "saved": true }`. The token must belong to the URL's UUID. Claims are
+atomic and repeatable for the same account; a rally saved to another account
+returns `409 conflict`. Missing credentials return `401`, and unknown or
+mismatched creator tokens return `404`. Claimed rallies appear in GET `/rallies`.
+
+Anonymous creation is limited to 10 attempts per IP per hour in each worker,
+returning `429 rate_limited`. This bounded in-memory guard is best-effort:
+worker restarts reset it and separate workers do not share counters. It uses
+Cloudflare's trusted `CF-Connecting-IP`; requests without that header share a
+fallback bucket. No paid services are required.
+
 ## Lifecycle and recommended action
 
-| `status` | Meaning |
-| --- | --- |
-| `draft` | Saved but not published; incomplete plans are allowed |
-| `open` | Published, collecting replies until its response deadline |
-| `confirmed` | Organizer explicitly locked time and place |
-| `cancelled` | Organizer closed the plan |
-| `completed` | The effective event time passed |
+| `status`    | Meaning                                                   |
+| ----------- | --------------------------------------------------------- |
+| `draft`     | Saved but not published; incomplete plans are allowed     |
+| `open`      | Published, collecting replies until its response deadline |
+| `confirmed` | Organizer explicitly locked time and place                |
+| `cancelled` | Organizer closed the plan                                 |
+| `completed` | The effective event time passed                           |
 
 `nextAction` is a separate field: `waiting_for_responses` → Waiting for responses,
 `choose_time` → Choose time, `choose_location` → Choose location,
@@ -373,7 +401,12 @@ finalize an expired Open plan with a future time. Archiving is also independent.
   "error": {
     "code": "invalid_request",
     "message": "Check the request fields.",
-    "fields": [{ "path": "activity", "message": "String must contain at most 200 character(s)" }]
+    "fields": [
+      {
+        "path": "activity",
+        "message": "String must contain at most 200 character(s)"
+      }
+    ]
   }
 }
 ```
@@ -381,16 +414,17 @@ finalize an expired Open plan with a future time. Archiving is also independent.
 `fields` appears only for schema validation errors. Use `code`/HTTP status for
 logic and show the message; do not parse message wording.
 
-| HTTP | Code | Meaning |
-| --- | --- | --- |
-| 400 | `invalid_request`, `invalid_json` | Invalid schema/UUID or malformed/missing JSON |
-| 401 | `unauthorized` | Missing, invalid, or expired user session |
-| 404 | `not_found` | Unknown endpoint or Rally absent from this account |
-| 405 | `method_not_allowed` | Unsupported method; see `Allow` header |
-| 409 | `invalid_state` | Backend plan/lifecycle validation failed; refresh and correct the action |
-| 413 | `payload_too_large` | Body exceeds 16 KiB |
-| 415 | `unsupported_media_type` | Body is not `application/json` |
-| 503 | `unavailable` | Temporary backend failure; preserve unsaved input |
+| HTTP | Code                              | Meaning                                                                  |
+| ---- | --------------------------------- | ------------------------------------------------------------------------ |
+| 400  | `invalid_request`, `invalid_json` | Invalid schema/UUID or malformed/missing JSON                            |
+| 401  | `unauthorized`                    | Missing, invalid, or expired user session                                |
+| 404  | `not_found`                       | Unknown endpoint or Rally absent from this account                       |
+| 405  | `method_not_allowed`              | Unsupported method; see `Allow` header                                   |
+| 429  | `rate_limited`                    | Anonymous creation limit reached; wait before retrying                   |
+| 409  | `invalid_state`, `conflict`       | Backend plan/lifecycle validation failed; refresh and correct the action |
+| 413  | `payload_too_large`               | Body exceeds 16 KiB                                                      |
+| 415  | `unsupported_media_type`          | Body is not `application/json`                                           |
+| 503  | `unavailable`                     | Temporary backend failure; preserve unsaved input                        |
 
 On 401, refresh through Supabase Auth if possible; otherwise show login. A
 different organizer's Rally returns 404 even if its UUID or creator token is
